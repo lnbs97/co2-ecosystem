@@ -1,0 +1,21 @@
+services:
+  # Definiert den Ledger-Service
+  ledger-backend:
+    container_name: ledger-backend
+
+    # Der Build-Kontext ist './backend', relativ zur Position dieser Compose-Datei
+    build: ./backend
+
+    ports:
+      # Mappt Port 8080 des Hosts auf Port 8080 im Container
+      # (Spring Boot läuft standardmäßig auf 8080)
+      - "8080:8080"
+
+    networks:
+      # Verwendet ein eigenes Netzwerk für den Service
+      - ledger-network
+
+# Definiert das Netzwerk
+networks:
+  ledger-network:
+    driver: bridge
