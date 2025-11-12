@@ -13,6 +13,14 @@ export default defineConfig([
   globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**']),
 
   {
+  "rules": {
+    "at-rule-no-unknown": [true, {
+      "ignoreAtRules": ["tailwind","apply","variants","responsive","screen","layer","plugin"]
+    }]
+  }
+  },
+
+  {
     languageOptions: {
       globals: {
         ...globals.browser,

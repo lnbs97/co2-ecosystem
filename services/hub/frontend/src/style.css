@@ -1,0 +1,6 @@
+/* src/style.css */
+@import "tailwindcss";
+@plugin "daisyui" {
+   themes: halloween --default, dark --prefersdark;
+ }
+/* Sie können das DaisyUI Plugin-Importieren hier weglassen, da es in tailwind.config.js definiert ist */
