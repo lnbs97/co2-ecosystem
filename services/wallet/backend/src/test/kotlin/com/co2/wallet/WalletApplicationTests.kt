@@ -1,10 +1,10 @@
-package com.co2.ledger
+package com.co2.wallet
 
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 
 @SpringBootTest
-class LedgerApplicationTests {
+class WalletApplicationTests {
 
 	@Test
 	fun contextLoads() {

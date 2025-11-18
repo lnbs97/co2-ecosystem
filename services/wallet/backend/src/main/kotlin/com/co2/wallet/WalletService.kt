@@ -1,0 +1,101 @@
+package com.co2.wallet
+
+import com.co2.wallet.dto.BalanceResponse
+import com.co2.wallet.dto.Co2TransferRequest
+import com.co2.wallet.dto.CreateWalletRequest
+import com.co2.wallet.dto.MoneyTransferRequest
+import com.co2.wallet.dto.TransactionEvent
+import org.springframework.amqp.rabbit.core.RabbitTemplate
+import org.springframework.http.HttpStatus
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.server.ResponseStatusException
+import java.time.Instant
+
+@Service
+class WalletService(
+    private val walletRepository: WalletRepository,
+    private val rabbitTemplate: RabbitTemplate
+) {
+
+    fun createWallet(request: CreateWalletRequest): Wallet {
+        if (walletRepository.findByUserId(request.userId) != null) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Wallet for user ${request.userId} already exists.")
+        }
+        val wallet = Wallet(
+            userId = request.userId,
+            co2Balance = request.co2Balance,
+            moneyBalance = request.moneyBalance
+        )
+        val savedWallet = walletRepository.save(wallet)
+        val event = TransactionEvent(
+            eventType = "WALLET_CREATED",
+            fromUserId = "",
+            toUserId = savedWallet.userId,
+            amount = 0.0,
+            description = "Wallet created",
+            timestamp = Instant.now()
+        )
+        rabbitTemplate.convertAndSend("demo_events_exchange", "", event)
+        return savedWallet
+    }
+
+    fun getBalance(userId: String): BalanceResponse {
+        val wallet = walletRepository.findByUserId(userId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Wallet for user $userId not found.")
+        return BalanceResponse(wallet.co2Balance, wallet.moneyBalance)
+    }
+
+    @Transactional
+    fun transferCo2(fromUserId: String, request: Co2TransferRequest): TransactionEvent {
+        val fromWallet = walletRepository.findByUserId(fromUserId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Wallet for user $fromUserId not found.")
+        val toWallet = walletRepository.findByUserId(request.toUserId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Wallet for user ${request.toUserId} not found.")
+
+        if (fromWallet.co2Balance < request.amount) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient CO2 balance.")
+        }
+
+        fromWallet.co2Balance -= request.amount
+        toWallet.co2Balance += request.amount
+
+        walletRepository.save(fromWallet)
+        walletRepository.save(toWallet)
+
+        val event = TransactionEvent(
+            eventType = "CO2_TRANSFER",
+            fromUserId = fromUserId,
+            toUserId = request.toUserId,
+            amount = request.amount,
+            description = request.description,
+            timestamp = Instant.now()
+        )
+//        rabbitTemplate.convertAndSend("demo_events_exchange", "", event)
+        return event
+    }
+
+    @Transactional
+    fun transferMoney(fromUserId: String, request: MoneyTransferRequest): TransactionEvent {
+        val fromWallet = walletRepository.findByUserId(fromUserId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Wallet for user $fromUserId not found.")
+        val toWallet = walletRepository.findByUserId(request.toUserId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Wallet for user ${request.toUserId} not found.")
+
+        if (fromWallet.moneyBalance < request.amount) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient money balance.")
+        }
+
+        fromWallet.moneyBalance -= request.amount
+        toWallet.moneyBalance += request.amount
+
+        walletRepository.save(fromWallet)
+        walletRepository.save(toWallet)
+
+        val event = TransactionEvent(
+            eventType = "MONEY_TRANSFER",
+            fromUserId = fromUserId,
+            toUserId = request.toUserId,
+            amount = request.amount,
+            description = request.description,
+            timestamp = Instant.now()
+        )
+        rabbitTemplate.convertAndSend("demo_events_exchange", "", event)
+        return event
+    }
+}

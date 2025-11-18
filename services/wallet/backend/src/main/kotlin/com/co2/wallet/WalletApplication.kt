@@ -1,11 +1,11 @@
-package com.co2.ledger
+package com.co2.wallet
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
 @SpringBootApplication
-class LedgerApplication
+class WalletApplication
 
 fun main(args: Array<String>) {
-	runApplication<LedgerApplication>(*args)
+	runApplication<WalletApplication>(*args)
 }
