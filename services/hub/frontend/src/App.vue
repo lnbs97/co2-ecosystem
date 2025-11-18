@@ -1,11 +1,20 @@
-<script setup></script>
-
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <div class="min-h-screen bg-base-200">
+    <!-- Komponente kann direkt verwendet werden, da sie im Setup-Block importiert wurde -->
+    <AppHeader /> 
+    
+    <main class="container mx-auto p-4">
+      <router-view />
+    </main>
+  </div>
 </template>
 
-<style scoped></style>
+<!-- 🚀 WICHTIG: Verwenden Sie <script setup> -->
+<script setup>
+// Imports werden automatisch im Template verfügbar gemacht
+import AppHeader from './components/AppHeader.vue';
+</script>
+
+<style>
+/* ... */
+</style>
