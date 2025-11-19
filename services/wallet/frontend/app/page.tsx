@@ -9,33 +9,51 @@ export default function HomePage() {
     const [co2Amount, setCo2Amount] = useState('');
     const [moneyRecipient, setMoneyRecipient] = useState('');
     const [moneyAmount, setMoneyAmount] = useState('');
-    const [userId, setUserId] = useState('person_a_uuid'); // Hardcoded user ID
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchBalance = async () => {
-            const balance = await getBalance(userId);
-            setBalance(balance);
+            try {
+                const balance = await getBalance();
+                setBalance(balance);
+            } catch (err: any) {
+                setError(err.message);
+            }
         };
         fetchBalance();
-    }, [userId]);
+    }, []);
 
     const handleCo2Transfer = async (e: React.FormEvent) => {
         e.preventDefault();
-        await transferCo2(userId, { toUserId: co2Recipient, amount: parseFloat(co2Amount), description: 'CO2 Transfer' });
-        const updatedBalance = await getBalance(userId);
-        setBalance(updatedBalance);
-        setCo2Recipient('');
-        setCo2Amount('');
+        try {
+            await transferCo2({ toUserId: co2Recipient, amount: parseFloat(co2Amount), description: 'CO2 Transfer' });
+            const updatedBalance = await getBalance();
+            setBalance(updatedBalance);
+            setCo2Recipient('');
+            setCo2Amount('');
+            setError(null);
+        } catch (err: any) {
+            setError(err.message);
+        }
     };
 
     const handleMoneyTransfer = async (e: React.FormEvent) => {
         e.preventDefault();
-        await transferMoney(userId, { toUserId: moneyRecipient, amount: parseFloat(moneyAmount), description: 'Money Transfer' });
-        const updatedBalance = await getBalance(userId);
-        setBalance(updatedBalance);
-        setMoneyRecipient('');
-        setMoneyAmount('');
+        try {
+            await transferMoney({ toUserId: moneyRecipient, amount: parseFloat(moneyAmount), description: 'Money Transfer' });
+            const updatedBalance = await getBalance();
+            setBalance(updatedBalance);
+            setMoneyRecipient('');
+            setMoneyAmount('');
+            setError(null);
+        } catch (err: any) {
+            setError(err.message);
+        }
     };
+
+    if (error) {
+        return <div className="container mx-auto p-4 text-red-500">Error: {error}</div>;
+    }
 
     return (
         <div className="container mx-auto p-4">
