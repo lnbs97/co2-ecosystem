@@ -2,6 +2,7 @@ package com.co2.wallet
 
 import com.co2.wallet.dto.BalanceResponse
 import com.co2.wallet.dto.Co2TransferRequest
+import com.co2.wallet.dto.CombinedTransferRequest
 import com.co2.wallet.dto.CreateWalletRequest
 import com.co2.wallet.dto.MoneyTransferRequest
 import com.co2.wallet.dto.TransactionEvent
@@ -36,5 +37,13 @@ class WalletController(private val walletService: WalletService) {
         @RequestBody request: MoneyTransferRequest
     ): TransactionEvent {
         return walletService.transferMoney(fromUserId, request)
+    }
+
+    @PostMapping("/transfer-combined")
+    fun transferCombined(
+        @RequestHeader("X-User-ID") fromUserId: String,
+        @RequestBody request: CombinedTransferRequest
+    ): List<TransactionEvent> {
+        return walletService.transferCombined(fromUserId, request)
     }
 }

@@ -28,5 +28,10 @@ class DataInitializer(private val walletService: WalletService) : CommandLineRun
         } catch (e: Exception) {
             println("Wallet for shop_b_uuid already exists.")
         }
+        try {
+            walletService.createWallet(CreateWalletRequest("exchange", 0.0, 0.0))
+        } catch (e: Exception) {
+            println("Wallet for exchange already exists.")
+        }
     }
 }

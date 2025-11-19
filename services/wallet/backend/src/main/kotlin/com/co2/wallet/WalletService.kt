@@ -2,6 +2,7 @@ package com.co2.wallet
 
 import com.co2.wallet.dto.BalanceResponse
 import com.co2.wallet.dto.Co2TransferRequest
+import com.co2.wallet.dto.CombinedTransferRequest
 import com.co2.wallet.dto.CreateWalletRequest
 import com.co2.wallet.dto.MoneyTransferRequest
 import com.co2.wallet.dto.TransactionEvent
@@ -68,7 +69,7 @@ class WalletService(
             description = request.description,
             timestamp = Instant.now()
         )
-//        rabbitTemplate.convertAndSend("demo_events_exchange", "", event)
+        // rabbitTemplate.convertAndSend("demo_events_exchange", "", event)
         return event
     }
 
@@ -97,5 +98,66 @@ class WalletService(
         )
         rabbitTemplate.convertAndSend("demo_events_exchange", "", event)
         return event
+    }
+
+    @Transactional
+    fun transferCombined(fromUserId: String, request: CombinedTransferRequest): List<TransactionEvent> {
+        val fromWallet = walletRepository.findByUserId(fromUserId)
+            ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Wallet for user $fromUserId not found.")
+        val toWallet = walletRepository.findByUserId(request.toUserId)
+            ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Wallet for user ${request.toUserId} not found.")
+
+        val insufficientCo2 = fromWallet.co2Balance < request.co2Amount
+        val insufficientMoney = fromWallet.moneyBalance < request.moneyAmount
+
+        // Check both balances and provide specific error messages
+        if (insufficientCo2 && insufficientMoney) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient CO2 and money balance.")
+        } else if (insufficientCo2) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient CO2 balance.")
+        } else if (insufficientMoney) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient money balance.")
+        }
+
+        // Perform transfers
+        fromWallet.co2Balance -= request.co2Amount
+        toWallet.co2Balance += request.co2Amount
+
+        fromWallet.moneyBalance -= request.moneyAmount
+        toWallet.moneyBalance += request.moneyAmount
+
+        walletRepository.save(fromWallet)
+        walletRepository.save(toWallet)
+
+        // Create and send events for each part of the transfer
+        val events = mutableListOf<TransactionEvent>()
+
+        if (request.co2Amount > 0) {
+            val co2Event = TransactionEvent(
+                eventType = "CO2_TRANSFER",
+                fromUserId = fromUserId,
+                toUserId = request.toUserId,
+                amount = request.co2Amount,
+                description = "${request.description} (CO2)",
+                timestamp = Instant.now()
+            )
+            rabbitTemplate.convertAndSend("demo_events_exchange", "", co2Event)
+            events.add(co2Event)
+        }
+
+        if (request.moneyAmount > 0) {
+            val moneyEvent = TransactionEvent(
+                eventType = "MONEY_TRANSFER",
+                fromUserId = fromUserId,
+                toUserId = request.toUserId,
+                amount = request.moneyAmount,
+                description = "${request.description} (Money)",
+                timestamp = Instant.now()
+            )
+            rabbitTemplate.convertAndSend("demo_events_exchange", "", moneyEvent)
+            events.add(moneyEvent)
+        }
+
+        return events
     }
 }
