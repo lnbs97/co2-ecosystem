@@ -1,0 +1,133 @@
+{
+    "info": {
+        "_postman_id": "<a valid postman id>",
+        "name": "CO2 Wallet Service",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Create Wallet",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"userId\": \"person_c_uuid\",\n    \"co2Balance\": 100.0,\n    \"moneyBalance\": 500.0\n}"
+                },
+                "url": {
+                    "raw": "http://localhost:8080/api/wallet/wallets",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080",
+                    "path": [
+                        "api",
+                        "wallet",
+                        "wallets"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Get Balance",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "X-User-ID",
+                        "value": "person_a_uuid"
+                    }
+                ],
+                "url": {
+                    "raw": "http://localhost:8080/api/wallet/balance",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080",
+                    "path": [
+                        "api",
+                        "wallet",
+                        "balance"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Transfer CO2",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "X-User-ID",
+                        "value": "person_a_uuid"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"toUserId\": \"person_b_uuid\",\n    \"amount\": 10.0,\n    \"description\": \"CO2 for services\"\n}"
+                },
+                "url": {
+                    "raw": "http://localhost:8080/api/wallet/transfer-co2",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080",
+                    "path": [
+                        "api",
+                        "wallet",
+                        "transfer-co2"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Transfer Money",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "X-User-ID",
+                        "value": "person_a_uuid"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"toUserId\": \"shop_a_uuid\",\n    \"amount\": 50.0,\n    \"description\": \"Groceries\"\n}"
+                },
+                "url": {
+                    "raw": "http://localhost:8080/api/wallet/transfer-money",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080",
+                    "path": [
+                        "api",
+                        "wallet",
+                        "transfer-money"
+                    ]
+                }
+            },
+            "response": []
+        }
+    ]
+}

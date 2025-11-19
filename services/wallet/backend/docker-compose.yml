@@ -1,0 +1,28 @@
+version: '3.8'
+services:
+  wallet-backend:
+    build: .
+    ports:
+      - "8082:8080"
+    environment:
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - DATABASE_HOST=wallet-db
+    networks:
+      - co2-ecosystem
+  wallet-db:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=wallet
+    volumes:
+      - wallet-db-data:/var/lib/postgresql/data
+    networks:
+      - co2-ecosystem
+
+volumes:
+  wallet-db-data:
+
+networks:
+  co2-ecosystem:
+    external: true

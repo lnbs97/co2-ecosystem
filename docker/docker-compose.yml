@@ -19,15 +19,34 @@ services:
 #      # ... (alle anderen Backends hier eintragen)
 
   # 2. LEDGER SERVICE (Spring Boot)
-  ledger-service:
-    container_name: ledger-service
-    # Der Build-Pfad ist relativ von /docker/
-    build: ../services/ledger/backend
+#  ledger-service:
+#    container_name: ledger-service
+#    # Der Build-Pfad ist relativ von /docker/
+#    build: ../services/ledger/backend
+#    ports:
+#      - "8080:8080"
+#    networks:
+#      - co2-network
+    # Kein 'ports' nötig, da der Proxy ihn intern anspricht
+
+  wallet-backend:
+    container_name: wallet-backend
+    build: ../services/wallet/backend
     ports:
-      - "8080:8080"
+      - "8082:8080"
     networks:
       - co2-network
-    # Kein 'ports' nötig, da der Proxy ihn intern anspricht
+    depends_on:
+      - rabbitmq
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - co2-network
 
 #  # 3. SHOP SERVICE (Beispiel-Backend)
 #  shop-service:
