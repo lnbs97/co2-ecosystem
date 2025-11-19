@@ -1,11 +1,10 @@
 import uuid
-# import requests # 1. Import auskommentiert (wird nicht mehr gebraucht)
+import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 # --- KONFIGURATION ---
-# (Ledger-URL wird nicht mehr gebraucht)
-# LEDGER_SERVICE_URL = "http://127.0.0.1:5002/ledger-service/create-account"
+WALLET_SERVICE_URL = "http://wallet-backend:8080/api/wallet/wallets"
 # ---------------------
 
 app = Flask(__name__)
@@ -57,7 +56,6 @@ def get_user_me():
 def get_hello():
     return jsonify({"message": "Hallo Welt vom Flask-Backend auf Port 8080!"})
 
-# Deine Registrierungs-Route
 @app.route('/api/user-service/register', methods=['POST'])
 def register_user():
     global user_counter
@@ -67,13 +65,17 @@ def register_user():
         if not vorname:
             return jsonify({"error": "Vorname fehlt"}), 400
 
-        # --- Deine Logik (UUID, reich/arm) ---
+        # --- Deine Logik ---
         user_id = str(uuid.uuid4())
+
+        # Reich/Arm Logik wieder aktivieren für das Startguthaben
         is_rich = user_counter % 2 == 1
         user_type = 'reich' if is_rich else 'arm'
-        # initial_tokens = 5000 if is_rich else 500 # (Wird für den Ledger gebraucht, hier nicht)
+        initial_balance = 1000.0 if is_rich else 50.0 # Beispielwerte
+
         user_counter += 1
 
+        # User lokal speichern
         user_database.append({
             "userId": user_id,
             "vorname": vorname,
@@ -81,31 +83,41 @@ def register_user():
         })
         print(f"--- USER DB (Service 1) --- \n{user_database}\n")
 
-        # --- INTERNER API-AUFRUF ZUM LEDGER SERVICE (JETZT AUSKOMMENTIERT) ---
-        
-        # 2. Den gesamten Block auskommentieren
-        # print(f"Rufe Ledger Service auf: {LEDGER_SERVICE_URL}")
-        # ledger_payload = {
-        #     "userId": user_id,
-        #     "initialBalance": initial_tokens
-        # }
-        # response = requests.post(LEDGER_SERVICE_URL, json=ledger_payload)
-        # response.raise_for_status() 
-        
-        print(">>> Ledger-Aufruf übersprungen (Testmodus) <<<")
+        # ⭐️ --- AUFRUF ZUM WALLET SERVICE --- ⭐️
+        try:
+            print(f"Erstelle Wallet für User {user_id} bei {WALLET_SERVICE_URL}...")
 
-        # --- Antwort an das Frontend ---
-        # Dies funktioniert jetzt immer, da der Ledger-Teil übersprungen wird
-        return jsonify({"userId": user_id}), 201
+            # Das JSON muss zum 'CreateWalletRequest' DTO im Kotlin-Backend passen
+            wallet_payload = {
+                "userId": user_id,
+                "co2Balance": initial_balance,
+                "moneyBalance": initial_balance,
+            }
 
-    # 3. Die spezielle Fehlerbehandlung für 'requests' ist nicht mehr nötig
-    # except requests.exceptions.RequestException as e:
-    #     print(f"!! FEHLER: Ledger Service nicht erreichbar unter {LEDGER_SERVICE_URL}")
-    #     ...
+            response = requests.post(WALLET_SERVICE_URL, json=wallet_payload, timeout=5)
+
+            # Wenn der Wallet-Service z.B. 400 sendet, sehen wir jetzt den Grund im Log:
+            if response.status_code != 200:
+                print(f"Fehler vom Wallet-Service: {response.text}")
+
+            response.raise_for_status()
+
+            print(">>> Wallet erfolgreich erstellt! <<<")
+
+        except requests.exceptions.RequestException as e:
+            # Wir loggen den Fehler, aber lassen die Registrierung vielleicht trotzdem durchgehen
+            # oder geben einen Fehler zurück, je nach Anforderung.
+            print(f"!! FEHLER beim Erstellen des Wallets: {e}")
+            # Option A: Hart abbrechen
+            return jsonify({"error": "Konnte Wallet nicht erstellen. Registrierung abgebrochen."}), 500
+            # Option B: Ignorieren (User hat dann kein Wallet) -> hier nicht empfohlen.
+
+        return jsonify({"userId": user_id, "userType": user_type}), 201
+
     except Exception as e:
         print(e)
         return jsonify({"error": "Interner Serverfehler"}), 500
 
 # Server auf Port 8080 starten
 if __name__ == '__main__':
-    app.run(port=8080, debug=True)
+    app.run(host='0.0.0.0', port=8080, debug=True)

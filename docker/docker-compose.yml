@@ -1,3 +1,5 @@
+version: "3.8" # Optional, aber gut für Übersicht
+
 services:
   traefik:
     image: "traefik:v2.10"
@@ -11,17 +13,19 @@ services:
       - "--entrypoints.web.address=:80"
       - "--entrypoints.dashboard.address=:8088"
     ports:
-      - "8081:80"
-      - "8088:8088"
+      - "8080:80"   # Der Haupteingang für alles
+      - "8088:8088" # Traefik Dashboard
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     networks:
       - co2-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.dashboard.rule=PathPrefix(`/traefik`)" # Dashboard auf /traefik verschoben, damit / für den Hub frei ist
       - "traefik.http.routers.dashboard.service=api@internal"
       - "traefik.http.routers.dashboard.entrypoints=dashboard"
+
+  # --- HUB SERVICES (ROOT) ---
 
   hub-backend:
     container_name: hub-backend
@@ -30,11 +34,9 @@ services:
       - co2-network
     labels:
       - "traefik.enable=true"
-      # WICHTIG: Prüfe, ob dieser Prefix auch in der App erwartet wird.
-      # Falls die App keine Ahnung von "/api/user-service" hat, brauchst du hier auch einen StripPrefix!
+      # Flask App erwartet /api/user-service, also leiten wir das genau so weiter
       - "traefik.http.routers.hub-backend.rule=PathPrefix(`/api/user-service`)"
       - "traefik.http.routers.hub-backend.entrypoints=web"
-      # WICHTIG: Prüfe, ob der Container intern WIRKLICH auf 8080 lauscht (siehe Checkliste unten)
       - "traefik.http.services.hub-backend.loadbalancer.server.port=8080"
 
   hub-ui:
@@ -44,9 +46,13 @@ services:
       - co2-network
     labels:
       - "traefik.enable=true"
+      # Fängt alles ab, was auf / beginnt (Root App)
+      # Wichtig: Spezifischere Regeln (wie /wallet oder /api) haben bei Traefik automatisch Vorrang.
       - "traefik.http.routers.hub-ui.rule=PathPrefix(`/`)"
       - "traefik.http.routers.hub-ui.entrypoints=web"
       - "traefik.http.services.hub-ui.loadbalancer.server.port=80"
+
+  # --- WALLET SERVICES (/wallet) ---
 
   wallet-backend:
     container_name: wallet-backend
@@ -57,9 +63,25 @@ services:
       - rabbitmq
     labels:
       - "traefik.enable=true"
+      # Kotlin Controller hört auf /api/wallet
       - "traefik.http.routers.wallet-backend.rule=PathPrefix(`/api/wallet`)"
       - "traefik.http.routers.wallet-backend.entrypoints=web"
       - "traefik.http.services.wallet-backend.loadbalancer.server.port=8080"
+
+  wallet-ui:
+    container_name: wallet-ui
+    build: ../services/wallet/frontend
+    networks:
+      - co2-network
+    labels:
+      - "traefik.enable=true"
+      # Frontend unter /wallet
+      - "traefik.http.routers.wallet-ui.rule=PathPrefix(`/wallet`)"
+      - "traefik.http.routers.wallet-ui.entrypoints=web"
+      # WICHTIG: Kein StripPrefix! Next.js mit basePath='/wallet' erwartet den Pfad inklusive /wallet.
+      - "traefik.http.services.wallet-ui.loadbalancer.server.port=3000"
+
+  # --- INFRASTRUKTUR ---
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -69,21 +91,6 @@ services:
       - "15672:15672"
     networks:
       - co2-network
-
-  wallet-ui:
-    container_name: wallet-ui
-    build: ../services/wallet/frontend
-    networks:
-      - co2-network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.wallet-ui.rule=PathPrefix(`/wallet`)"
-      - "traefik.http.routers.wallet-ui.entrypoints=web"
-      - "traefik.http.middlewares.wallet-redirect-slash.redirectregex.regex=^/(.*)wallet$$"
-      - "traefik.http.middlewares.wallet-redirect-slash.redirectregex.replacement=/$${1}wallet/"
-      - "traefik.http.middlewares.wallet-stripprefix.stripprefix.prefixes=/wallet"
-      - "traefik.http.routers.wallet-ui.middlewares=wallet-redirect-slash,wallet-stripprefix"
-      - "traefik.http.services.wallet-ui.loadbalancer.server.port=3000"
 
 networks:
   co2-network:
