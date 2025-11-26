@@ -63,9 +63,13 @@ services:
       - rabbitmq
     labels:
       - "traefik.enable=true"
-      # Kotlin Controller hört auf /api/wallet
-      - "traefik.http.routers.wallet-backend.rule=PathPrefix(`/api/wallet`)"
       - "traefik.http.routers.wallet-backend.entrypoints=web"
+      # 1. Router-Regel bleibt gleich
+      - "traefik.http.routers.wallet-backend.rule=PathPrefix(`/api/wallet`)"
+      # 2. Definieren Sie eine Middleware, um den Präfix zu entfernen
+      - "traefik.http.middlewares.wallet-stripprefix.stripprefix.prefixes=/api/wallet"
+      # 3. Weisen Sie die Middleware dem Router zu
+      - "traefik.http.routers.wallet-backend.middlewares=wallet-stripprefix"
       - "traefik.http.services.wallet-backend.loadbalancer.server.port=8080"
 
   wallet-ui:
