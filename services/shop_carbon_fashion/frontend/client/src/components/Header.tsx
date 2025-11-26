@@ -4,16 +4,17 @@ import { Input } from "./ui/input.tsx";
 import BalanceWidget from "./BalanceWidget.tsx";
 import { Badge } from "./ui/badge.tsx";
 import { useState, useEffect } from "react";
+import { useBalance } from "@/lib/api";
 
 interface HeaderProps {
   cartItemCount: number;
-  euroBalance: number;
-  co2Balance: number;
   onCartClick: () => void;
 }
 
-export default function Header({ cartItemCount, euroBalance, co2Balance, onCartClick }: HeaderProps) {
+export default function Header({ cartItemCount, onCartClick }: HeaderProps) {
   const [isDark, setIsDark] = useState(false);
+  // Lade Balance direkt von der API
+  const { data: balance, isLoading, isError } = useBalance();
 
   useEffect(() => {
     const isDarkMode = document.documentElement.classList.contains("dark");
@@ -66,7 +67,13 @@ export default function Header({ cartItemCount, euroBalance, co2Balance, onCartC
 
           <div className="flex items-center gap-4">
             <div className="hidden md:block">
-              <BalanceWidget euroBalance={euroBalance} co2Balance={co2Balance} />
+              {isLoading ? (
+                <div className="h-8 w-32 bg-muted animate-pulse rounded-md" />
+              ) : isError || !balance ? (
+                <BalanceWidget euroBalance={0} co2Balance={0} />
+              ) : (
+                <BalanceWidget euroBalance={balance.moneyBalance} co2Balance={balance.co2Balance} />
+              )}
             </div>
             <Button
               size="icon"

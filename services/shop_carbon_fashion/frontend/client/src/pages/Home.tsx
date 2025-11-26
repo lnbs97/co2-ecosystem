@@ -6,16 +6,16 @@ import ProductDetailModal from "@/components/ProductDetailModal";
 import { products, Product } from "@/lib/products";
 import { CartItem } from "@/components/ShoppingCartDrawer";
 import { useToast } from "@/hooks/use-toast";
+import { useCombinedTransfer, MERCHANT_ID } from "@/lib/api";
 
 export default function Home() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  const { toast } = useToast();
 
-  const euroBalance = 1250.00;
-  const co2Balance = 5000;
+  const { toast } = useToast();
+  const { mutate: checkout, isPending: isCheckingOut } = useCombinedTransfer();
 
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);
@@ -68,9 +68,33 @@ export default function Home() {
   };
 
   const handleCheckout = () => {
-    toast({
-      title: "Checkout",
-      description: "Checkout functionality would be implemented here with the wallet API",
+    const totalEuro = cartItems.reduce((sum, item) => sum + item.euroPrice * item.quantity, 0);
+    const totalCo2 = cartItems.reduce((sum, item) => sum + item.co2Price * item.quantity, 0);
+
+    if (totalEuro <= 0) return;
+
+    checkout({
+      toUserId: MERCHANT_ID,
+      moneyAmount: totalEuro,
+      co2Amount: totalCo2,
+      description: `Checkout ${cartItems.length} items from EcoFashion`
+    }, {
+      onSuccess: () => {
+        setCartItems([]);
+        setIsCartOpen(false);
+        toast({
+          title: "Checkout Successful",
+          description: `Paid €${totalEuro.toFixed(2)} and ${totalCo2} CO2 tokens.`,
+        });
+      },
+      onError: (error) => {
+        // Hier wird nun die spezifische Fehlermeldung des Servers angezeigt
+        toast({
+          title: "Transaction Failed",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
     });
   };
 
@@ -78,8 +102,6 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <Header
         cartItemCount={cartItems.reduce((sum, item) => sum + item.quantity, 0)}
-        euroBalance={euroBalance}
-        co2Balance={co2Balance}
         onCartClick={() => setIsCartOpen(true)}
       />
       <ProductGrid products={products} onProductClick={handleProductClick} />
@@ -90,6 +112,16 @@ export default function Home() {
         onUpdateQuantity={handleUpdateQuantity}
         onCheckout={handleCheckout}
       />
+
+      {isCheckingOut && (
+        <div className="fixed inset-0 bg-black/20 z-[60] flex items-center justify-center pointer-events-auto">
+          <div className="bg-background p-6 rounded-lg shadow-lg flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <p className="font-medium">Processing Transaction...</p>
+          </div>
+        </div>
+      )}
+
       <ProductDetailModal
         isOpen={isProductModalOpen}
         onClose={() => setIsProductModalOpen(false)}
