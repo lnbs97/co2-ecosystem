@@ -25,6 +25,19 @@ services:
       - "traefik.http.routers.dashboard.service=api@internal"
       - "traefik.http.routers.dashboard.entrypoints=dashboard"
 
+  # --- EXCHANGE SERVICE (/api/exchange-service) ---
+  exchange-backend:
+    container_name: exchange-backend
+    build: ../services/exchange/backend 
+    networks:
+      - co2-network
+    labels:
+      - "traefik.enable=true"
+      # Routet Anfragen an /api/exchange-service an diesen Container
+      - "traefik.http.routers.exchange-backend.rule=PathPrefix(`/api/exchange-service`)"
+      - "traefik.http.routers.exchange-backend.entrypoints=web"
+      - "traefik.http.services.exchange-backend.loadbalancer.server.port=8080"
+
   # --- HUB SERVICES (ROOT) ---
 
   hub-backend:

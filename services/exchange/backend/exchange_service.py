@@ -1,378 +1,239 @@
-# exchange_service.py
 import uuid
-import requests # (Hier nicht aktiv genutzt, aber für echten Ledger nötig)
+import requests
+import sys
+from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from datetime import datetime
 
-# --- KONFIGURATION & APP ---
 app = Flask(__name__)
-CORS(app) 
-# Wir simulieren, dass der Ledger auf Port 5002 läuft
-LEDGER_SERVICE_URL_BASE = "http://127.0.0.1:5002/api/ledger-service"
+CORS(app)
 
-# --- DEMO IN-MEMORY DATENBANK ---
-# Diese globalen Variablen sind unser "flüchtiger" Speicher.
-# Sie werden bei jedem Server-Neustart zurückgesetzt.
+# --- KONFIGURATION ---
+EXCHANGE_ACCOUNT_ID = "exchange"
 
-# 1. Das Auftragsbuch: Liste aller Aufträge
-# Status: 'open', 'filled', 'cancelled'
-order_book = []
+# WICHTIG: Wir nutzen direkt den Container-Namen 'wallet-backend'.
+# Das funktioniert innerhalb des Docker-Netzwerks sehr zuverlässig.
+WALLET_SERVICE_URL = "http://wallet-backend:8080/api/wallet"
 
-# 2. Die Handelshistorie: Liste aller erfolgreichen Trades
-trade_history = []
-# ---------------------------------
+print(f"--- STARTUP CONFIG ---")
+print(f"Exchange Service startet auf Port 8080.")
+print(f"Verbinde zu Wallet API: {WALLET_SERVICE_URL}")
+print(f"----------------------")
+sys.stdout.flush() # Erzwingt sofortige Ausgabe im Docker Log
 
+# --- DATENHALTUNG BÖRSE ---
+orders_db = []
 
-# --- MOCK-FUNKTIONEN (LEDGER-SIMULATION) ---
-# Diese simulieren die Anrufe an deinen Ledger-Service.
-# Wir definieren zwei Test-User für den Postman-Test:
-# 'armer_user': Hat viele Tokens, wenig Geld
-# 'reicher_user': Hat wenig Tokens, viel Geld
+# --- HELPER: KOMMUNIKATION MIT WALLET API ---
 
-def _get_total_balance_from_ledger(user_id):
-    """
-    SIMULIERT einen API-Aufruf an den Ledger-Service.
-    Gibt das *Gesamtguthaben* des Nutzers zurück.
-    """
-    print(f"[Mock Ledger] Rufe Gesamtguthaben für {user_id} ab...")
-    if user_id == "armer_user":
-        # Dieser Nutzer ist "arm" (wenig Geld, viele Tokens)
-        return {"eur": 100.0, "tokens": 500.0}
-    elif user_id == "reicher_user":
-        # Dieser Nutzer ist "reich" (viel Geld, wenig Tokens)
-        return {"eur": 10000.0, "tokens": 10.0}
-    else:
-        # Standard-Nutzer
-        return {"eur": 500.0, "tokens": 50.0}
+def get_auth_header(user_id):
+    """Erstellt den Header für die Wallet API Calls"""
+    # Der Wallet-Service erwartet die User-ID im Header 'X-User-ID'
+    return {'X-User-ID': user_id}
 
-def _execute_trade_on_ledger(buyer_id, seller_id, amount_tokens, amount_eur):
-    """
-    SIMULIERT die "atomare" Transaktion beim Ledger.
-    Gibt True bei Erfolg oder False (z.B. nicht gedeckt) zurück.
-    In dieser Demo nehmen wir an, dass es immer klappt,
-    da wir die Deckung *vorher* im Exchange-Service prüfen.
-    """
-    print(f"[Mock Ledger] FÜHRE TRADE AUS:")
-    print(f"  > Käufer: {buyer_id}, Verkäufer: {seller_id}")
-    print(f"  > Betrag: {amount_tokens} Tokens für {amount_eur} EUR")
-    
-    # Hier würde der echte API-Aufruf (requests.post(...)) stattfinden.
-    # Der echte Ledger würde dann die Konten prüfen und buchen.
-    # Wir simulieren, dass es immer erfolgreich ist.
-    return True
-# --- ENDE MOCK-FUNKTIONEN ---
-
-
-# --- HILFSFUNKTIONEN (INTERNE LOGIK) ---
-
-def get_user_id_from_header():
-    """ 
-    Identifiziert den Nutzer anhand des Auth-Headers.
-    Wirft einen ValueError, wenn der Header fehlt oder ungültig ist.
-    """
-    auth_header = request.headers.get('Authorization')
-    if not auth_header:
-        raise ValueError("Authorization-Header fehlt")
+def wallet_get_balance(user_id):
+    """Ruft das Guthaben vom echten Wallet-Service ab."""
     try:
-        token_type, user_id = auth_header.split(' ')
-        if token_type.lower() != 'bearer':
-            raise ValueError
-        return user_id
-    except ValueError:
-        raise ValueError("Ungültiger Authorization-Header")
-
-def _get_user_reservations(user_id):
-    """
-    Berechnet das *reservierte* Guthaben eines Nutzers,
-    indem alle seine 'open'-Aufträge im Orderbuch summiert werden.
-    """
-    reserved_eur = 0.0
-    reserved_tokens = 0.0
-    
-    for order in order_book:
-        if order['userId'] == user_id and order['status'] == 'open':
-            if order['type'] == 'buy':
-                # Reserviert EUR für Kaufaufträge
-                reserved_eur += order['amount_remaining'] * order['price']
-            elif order['type'] == 'sell':
-                # Reserviert Tokens für Verkaufsaufträge
-                reserved_tokens += order['amount_remaining']
-                
-    return {"eur": reserved_eur, "tokens": reserved_tokens}
-
-def _get_available_balance(user_id):
-    """
-    Berechnet das *verfügbare* Guthaben.
-    Formel: Verfügbar = Gesamt (vom Ledger) - Reserviert (aus 'open' Orders)
-    """
-    total = _get_total_balance_from_ledger(user_id)
-    reserved = _get_user_reservations(user_id)
-    
-    available_eur = total['eur'] - reserved['eur']
-    available_tokens = total['tokens'] - reserved['tokens']
-    
-    return {"eur": available_eur, "tokens": available_tokens}
-
-def _find_and_execute_matches(new_order):
-    """
-    Das Herzstück: Die PARTIAL-FILL Matching-Engine.
-    Wird aufgerufen, sobald ein neuer Auftrag erstellt wird.
-    """
-    print(f"[Matching Engine] Starte Suche für Auftrag {new_order['orderId']}...")
-    
-    # Wir suchen, solange der neue Auftrag noch 'open' ist und Füllmenge hat
-    while new_order['status'] == 'open' and new_order['amount_remaining'] > 0:
+        url = f"{WALLET_SERVICE_URL}/balance"
+        headers = get_auth_header(user_id)
         
-        best_match = None
+        # Timeout verhindert, dass der Service ewig hängt, wenn Wallet down ist
+        response = requests.get(url, headers=headers, timeout=5)
         
-        if new_order['type'] == 'buy':
-            # KÄUFER (new_order) sucht VERKÄUFER (match)
-            # Kriterium: Günstigster Preis (min(price)), der <= dem Kauf-Limit ist
-            potential_matches = [
-                o for o in order_book 
-                if o['status'] == 'open' and \
-                   o['type'] == 'sell' and \
-                   o['userId'] != new_order['userId'] and \
-                   o['price'] <= new_order['price']
-            ]
-            if not potential_matches:
-                print("[Matching Engine] Kein passender Verkäufer gefunden.")
-                break # Schleife beenden, kein Match
-                
-            # Sortieren, um den GÜNSTIGSTEN Verkäufer zuerst zu nehmen
-            potential_matches.sort(key=lambda o: o['price'])
-            best_match = potential_matches[0]
-            trade_price = best_match['price'] # Handel findet zum Preis des Verkäufers statt
-            
-        else: # new_order['type'] == 'sell'
-            # VERKÄUFER (new_order) sucht KÄUFER (match)
-            # Kriterium: Teuerster Preis (max(price)), der >= dem Verkaufs-Limit ist
-            potential_matches = [
-                o for o in order_book 
-                if o['status'] == 'open' and \
-                   o['type'] == 'buy' and \
-                   o['userId'] != new_order['userId'] and \
-                   o['price'] >= new_order['price']
-            ]
-            if not potential_matches:
-                print("[Matching Engine] Kein passender Käufer gefunden.")
-                break # Schleife beenden, kein Match
-            
-            # Sortieren, um den HÖCHSTBIETENDEN Käufer zuerst zu nehmen
-            potential_matches.sort(key=lambda o: o['price'], reverse=True)
-            best_match = potential_matches[0]
-            trade_price = best_match['price'] # Handel findet zum Preis des Käufers statt
-
-        # --- MATCH GEFUNDEN! ---
-        print(f"[Matching Engine] Match gefunden! {new_order['orderId']} mit {best_match['orderId']}")
-
-        # 1. Handelsmenge bestimmen (die kleinere der beiden)
-        trade_amount = min(new_order['amount_remaining'], best_match['amount_remaining'])
-        trade_eur = trade_amount * trade_price
-        
-        # 2. IDs bestimmen
-        buyer_id = new_order['userId'] if new_order['type'] == 'buy' else best_match['userId']
-        seller_id = new_order['userId'] if new_order['type'] == 'sell' else best_match['userId']
-
-        # 3. Ledger Service aufrufen (simuliert)
-        trade_success = _execute_trade_on_ledger(buyer_id, seller_id, trade_amount, trade_eur)
-        
-        if not trade_success:
-            # Sollte in unserer Demo nicht passieren, aber in echt:
-            # Der Handel ist geplatzt (z.B. Ledger sagt "nicht gedeckt")
-            print(f"[Matching Engine] !! LEDGER FEHLER !! Handel geplatzt.")
-            # Wir könnten den 'best_match' als 'failed' markieren und weitersuchen
-            break # Brechen die Suche für den 'new_order' ab
-
-        # 4. Handel war erfolgreich! Aufträge aktualisieren.
-        print(f"[Matching Engine] Handel erfolgreich. Aktualisiere Aufträge.")
-        new_order['amount_remaining'] -= trade_amount
-        best_match['amount_remaining'] -= trade_amount
-        
-        # 5. Status der Aufträge prüfen
-        if new_order['amount_remaining'] == 0:
-            new_order['status'] = 'filled'
-        if best_match['amount_remaining'] == 0:
-            best_match['status'] = 'filled'
-            
-        # 6. Handel in Historie speichern
-        trade_history.append({
-            "tradeId": str(uuid.uuid4()),
-            "price": trade_price,
-            "amount": trade_amount,
-            "timestamp": datetime.utcnow().isoformat()
-        })
-
-
-# --- API-ENDPUNKTE ---
-
-@app.route('/api/exchange-service/test', methods=['GET'])
-def test_route():
-    return jsonify({"message": "Hallo vom Exchange-Service auf Port 8081!"})
-
-@app.route('/api/exchange-service/my-balance', methods=['GET'])
-def get_my_balance():
-    """
-    Gibt das Gesamt-, Reservierte- und Verfügbare-Guthaben
-    des eingeloggten Nutzers zurück.
-    """
-    try:
-        user_id = get_user_id_from_header()
-        
-        total = _get_total_balance_from_ledger(user_id)
-        reserved = _get_user_reservations(user_id)
-        
-        available = {
-            "eur": total['eur'] - reserved['eur'],
-            "tokens": total['tokens'] - reserved['tokens']
-        }
-        
-        return jsonify({
-            "total": total,
-            "reserved": reserved,
-            "available": available
-        }), 200
-        
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 401
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                "eur": float(data.get("moneyBalance", 0.0)),
+                "tokens": float(data.get("co2Balance", 0.0))
+            }
+        else:
+            print(f"[Wallet Error] Get Balance failed ({response.status_code}): {response.text}")
+            return {"eur": 0.0, "tokens": 0.0}
     except Exception as e:
-        return jsonify({"error": f"Interner Serverfehler: {e}"}), 500
+        print(f"[Internal Error] Connection to Wallet Service failed: {e}")
+        return {"eur": 0.0, "tokens": 0.0}
 
+def wallet_transfer(from_id, to_id, amount_eur, amount_token, description="Trade"):
+    """Führt eine Transaktion im Wallet-Service durch."""
+    try:
+        url = f"{WALLET_SERVICE_URL}/transfer-combined"
+        headers = get_auth_header(from_id) # Wichtig: Der Sender muss im Header stehen
+        
+        payload = {
+            "toUserId": to_id,
+            "moneyAmount": float(amount_eur),
+            "co2Amount": float(amount_token),
+            "description": description
+        }
+
+        response = requests.post(url, json=payload, headers=headers, timeout=5)
+
+        if response.status_code == 200:
+            print(f"[Wallet Success] {from_id} -> {to_id}: {amount_eur}€ | {amount_token} CO2")
+            return True
+        else:
+            print(f"[Wallet Error] Transfer failed ({response.status_code}): {response.text}")
+            return False
+
+    except Exception as e:
+        print(f"[Internal Error] Transfer Request failed: {e}")
+        return False
+
+# --- HILFSFUNKTIONEN ---
+def get_user_id_from_header():
+    """
+    Liest die User-ID aus den Headern.
+    Unterstützt sowohl 'X-User-ID' als auch 'Authorization: Bearer <ID>'.
+    """
+    # 1. Priorität: Direkter Header (wird oft von Proxies oder internen Services genutzt)
+    user_id = request.headers.get('X-User-ID')
+    if user_id:
+        return user_id
+
+    # 2. Priorität: Authorization Header (Standard für Frontends)
+    auth_header = request.headers.get('Authorization')
+    if auth_header and ' ' in auth_header:
+        # Schneidet "Bearer " ab und nimmt den Rest
+        return auth_header.split(' ')[1]
+    
+    return "anonym"
+
+# ==================================================================
+# API ENDPUNKTE
+# ==================================================================
+
+# 1. Guthaben anzeigen
+@app.route('/api/exchange-service/balance', methods=['GET'])
+def get_my_balance():
+    user_id = get_user_id_from_header()
+    balance = wallet_get_balance(user_id)
+    return jsonify(balance), 200
+
+# 2. Alle Orders abrufen
 @app.route('/api/exchange-service/orders', methods=['GET'])
-def get_open_orders():
-    """
-    Gibt das öffentliche Orderbuch zurück (alle offenen Aufträge).
-    Keine Authentifizierung nötig.
-    """
-    # Wir geben nur die Aufträge zurück, die noch 'open' sind
-    open_orders = [o for o in order_book if o['status'] == 'open']
-    
-    # (Optional: Für ein besseres UI die 'buy' und 'sell' trennen)
-    buy_orders = sorted(
-        [o for o in open_orders if o['type'] == 'buy'], 
-        key=lambda o: o['price'], reverse=True
-    )
-    sell_orders = sorted(
-        [o for o in open_orders if o['type'] == 'sell'], 
-        key=lambda o: o['price']
-    )
-    
-    return jsonify({"buy_orders": buy_orders, "sell_orders": sell_orders}), 200
+def get_orders():
+    # Zeige nur offene Orders an
+    active_orders = [o for o in orders_db if o['status'] == 'open']
+    return jsonify(active_orders), 200
 
-@app.route('/api/exchange-service/market-price', methods=['GET'])
-def get_market_price():
-    """
-    Gibt den Preis des letzten Handels zurück ("Last Traded Price").
-    Keine Authentifizierung nötig.
-    """
-    if not trade_history:
-        # Kein Handel passiert
-        return jsonify({"last_price": None}), 200
-    
-    # Den Preis des letzten Trades zurückgeben
-    return jsonify({"last_price": trade_history[-1]['price']}), 200
-
+# 3. ORDER ERSTELLEN
 @app.route('/api/exchange-service/orders', methods=['POST'])
 def create_order():
-    """
-    Erstellt einen neuen 'buy' oder 'sell' Auftrag.
-    Prüft sofort auf verfügbares Guthaben (Asset Locking).
-    Startet sofort die Matching-Engine.
-    """
     try:
         user_id = get_user_id_from_header()
         data = request.json
-        
-        order_type = data.get('type')
-        amount = float(data.get('amount'))
-        price = float(data.get('price'))
-        
-        if not all([order_type, amount, price]) or order_type not in ['buy', 'sell'] or amount <= 0 or price <= 0:
-            return jsonify({"error": "Ungültige Auftragsdaten"}), 400
 
-        # --- ASSET LOCKING PRÜFUNG ---
-        available = _get_available_balance(user_id)
+        amount_token = float(data.get('amount_token', 0))
+        amount_cash = float(data.get('amount_cash', 0.0))
+        order_type = data.get('type') # 'buy' oder 'sell'
+
+        if amount_token <= 0 or amount_cash <= 0:
+            return jsonify({"error": "Werte müssen positiv sein"}), 400
+
+        # --- LOGIK: Vorkasse an Treuhandkonto ---
         
+        # A) KAUFEN: User sendet GELD an Treuhand
         if order_type == 'buy':
-            required_eur = amount * price
-            if required_eur > available['eur']:
-                return jsonify({
-                    "error": "Nicht genügend verfügbares EUR-Guthaben.",
-                    "available_eur": available['eur'],
-                    "required_eur": required_eur
-                }), 400 # 400 Bad Request
+            success = wallet_transfer(
+                from_id=user_id, 
+                to_id=EXCHANGE_ACCOUNT_ID, 
+                amount_eur=amount_cash, 
+                amount_token=0.0,
+                description=f"Order Deposit (Buy) {user_id}"
+            )
+            if not success:
+                return jsonify({"error": "Transfer fehlgeschlagen (Nicht genug EUR)!"}), 400
         
+        # B) VERKAUFEN: User sendet TOKENS an Treuhand
         elif order_type == 'sell':
-            if amount > available['tokens']:
-                return jsonify({
-                    "error": "Nicht genügend verfügbare Tokens.",
-                    "available_tokens": available['tokens'],
-                    "required_tokens": amount
-                }), 400 # 400 Bad Request
+            success = wallet_transfer(
+                from_id=user_id, 
+                to_id=EXCHANGE_ACCOUNT_ID, 
+                amount_eur=0.0, 
+                amount_token=amount_token,
+                description=f"Order Deposit (Sell) {user_id}"
+            )
+            if not success:
+                return jsonify({"error": "Transfer fehlgeschlagen (Nicht genug Tokens)!"}), 400
 
-        # --- PRÜFUNG BESTANDEN ---
+        # C) Order speichern
         new_order = {
-            "orderId": str(uuid.uuid4()),
-            "userId": user_id,
+            "order_id": str(uuid.uuid4()),
+            "user_id": user_id,
             "type": order_type,
-            "amount_initial": amount, # Die ursprüngliche Menge
-            "amount_remaining": amount, # Die Menge, die noch gefüllt werden muss
-            "price": price,
-            "status": "open", # 'open', 'filled', 'cancelled'
-            "created_at": datetime.utcnow().isoformat()
+            "amount_token": amount_token,
+            "amount_cash": amount_cash,
+            "status": "open",
+            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
+        orders_db.append(new_order)
         
-        order_book.append(new_order)
-        
-        # --- MATCHING-ENGINE STARTEN ---
-        _find_and_execute_matches(new_order)
-        
-        print(f"--- ORDER BOOK (Service 2) --- \n{order_book}\n")
         return jsonify(new_order), 201
 
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 401
     except Exception as e:
-        print(e)
-        return jsonify({"error": f"Interner Serverfehler: {e}"}), 500
+        print(f"Error creating order: {e}")
+        return jsonify({"error": "Serverfehler"}), 500
 
-@app.route('/api/exchange-service/orders/<string:order_id>', methods=['DELETE'])
-def cancel_order(order_id):
-    """
-    Löscht einen 'open' Auftrag.
-    Gibt reserviertes Guthaben wieder frei.
-    """
-    try:
-        user_id = get_user_id_from_header()
-        
-        # 1. Auftrag finden
-        order_to_cancel = next((o for o in order_book if o['orderId'] == order_id), None)
-        
-        if not order_to_cancel:
-            return jsonify({"error": "Auftrag nicht gefunden"}), 404
-            
-        # 2. Besitz prüfen
-        if order_to_cancel['userId'] != user_id:
-            return jsonify({"error": "Keine Berechtigung, diesen Auftrag zu löschen"}), 403 # 403 Forbidden
-            
-        # 3. Status prüfen
-        if order_to_cancel['status'] != 'open':
-            return jsonify({"error": f"Auftrag kann nicht gelöscht werden (Status: {order_to_cancel['status']})"}), 400
-            
-        # 4. Löschen (Status ändern)
-        order_to_cancel['status'] = 'cancelled'
-        
-        print(f"--- ORDER BOOK (Service 2) --- \n{order_book}\n")
-        return jsonify({"message": "Auftrag erfolgreich gelöscht"}), 200
-        
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 401
-    except Exception as e:
-        return jsonify({"error": f"Interner Serverfehler: {e}"}), 500
+# 4. ORDER LÖSCHEN (Rückerstattung)
+@app.route('/api/exchange-service/orders/<order_id>', methods=['DELETE'])
+def delete_order(order_id):
+    user_id = get_user_id_from_header()
+    order = next((o for o in orders_db if o['order_id'] == order_id), None)
+    
+    if not order: return jsonify({"error": "Order nicht gefunden"}), 404
+    if order['user_id'] != user_id: return jsonify({"error": "Das ist nicht deine Order"}), 403
+    if order['status'] != 'open': return jsonify({"error": "Order ist nicht mehr offen"}), 400
 
+    # --- RÜCKZAHLUNG ---
+    success = False
+    if order['type'] == 'buy':
+        # Geld zurück
+        success = wallet_transfer(EXCHANGE_ACCOUNT_ID, user_id, order['amount_cash'], 0.0, f"Refund {order_id}")
+    elif order['type'] == 'sell':
+        # Tokens zurück
+        success = wallet_transfer(EXCHANGE_ACCOUNT_ID, user_id, 0.0, order['amount_token'], f"Refund {order_id}")
 
-# --- Server starten ---
+    if not success: return jsonify({"error": "Rückerstattung fehlgeschlagen"}), 500
+
+    order['status'] = 'deleted'
+    return jsonify({"message": "Order gelöscht und Guthaben erstattet"}), 200
+
+# 5. ORDER ANNEHMEN (Trade Execution)
+@app.route('/api/exchange-service/orders/<order_id>/accept', methods=['POST'])
+def accept_order(order_id):
+    taker_id = get_user_id_from_header()
+    order = next((o for o in orders_db if o['order_id'] == order_id), None)
+    
+    if not order or order['status'] != 'open': return jsonify({"error": "Order nicht verfügbar"}), 404
+    maker_id = order['user_id']
+    if taker_id == maker_id: return jsonify({"error": "Du kannst nicht deine eigene Order annehmen"}), 400
+
+    # --- TRADE LOGIK ---
+    if order['type'] == 'buy':
+        # Maker will Kaufen (Geld ist schon bei Treuhand)
+        # Taker muss Tokens an Treuhand senden
+        if not wallet_transfer(taker_id, EXCHANGE_ACCOUNT_ID, 0.0, order['amount_token'], "Trade: Taker Deposit"):
+             return jsonify({"error": "Du hast nicht genug Tokens!"}), 400
+        
+        # Swap: Geld an Taker, Tokens an Maker
+        wallet_transfer(EXCHANGE_ACCOUNT_ID, taker_id, order['amount_cash'], 0.0, "Trade: Cash to Taker")
+        wallet_transfer(EXCHANGE_ACCOUNT_ID, maker_id, 0.0, order['amount_token'], "Trade: Tokens to Maker")
+
+    elif order['type'] == 'sell':
+        # Maker will Verkaufen (Tokens sind schon bei Treuhand)
+        # Taker muss Geld an Treuhand senden
+        if not wallet_transfer(taker_id, EXCHANGE_ACCOUNT_ID, order['amount_cash'], 0.0, "Trade: Taker Deposit"):
+             return jsonify({"error": "Du hast nicht genug Geld!"}), 400
+
+        # Swap: Tokens an Taker, Geld an Maker
+        wallet_transfer(EXCHANGE_ACCOUNT_ID, taker_id, 0.0, order['amount_token'], "Trade: Tokens to Taker")
+        wallet_transfer(EXCHANGE_ACCOUNT_ID, maker_id, order['amount_cash'], 0.0, "Trade: Cash to Maker")
+
+    order['status'] = 'closed'
+    order['filled_by'] = taker_id
+    
+    return jsonify({"message": "Trade erfolgreich ausgeführt!", "order": order}), 200
+
 if __name__ == '__main__':
-    # WICHTIG: Auf einem anderen Port als der User Service (8080)!
-    app.run(port=8081, debug=True)
+    # Wichtig: 0.0.0.0 für Docker Erreichbarkeit
+    app.run(host='0.0.0.0', port=8080, debug=True)
