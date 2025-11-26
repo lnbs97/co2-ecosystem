@@ -84,20 +84,19 @@ services:
 
   shop-carbon-fashion-ui:
     container_name: shop-carbon-fashion-ui
-    # Der Build-Kontext verweist auf das Verzeichnis mit der Dockerfile
     build: ../services/shop_carbon_fashion/frontend
     networks:
       - co2-network
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.shop-ui.entrypoints=web"
-      # 1. Der Router lauscht auf Anfragen, die mit /shop beginnen
+      # 1. Der Router fängt alle Anfragen ab, die mit /shop beginnen
       - "traefik.http.routers.shop-ui.rule=PathPrefix(`/shop`)"
-      # 2. Middleware definieren, um den /shop-Präfix zu entfernen
+      # 2. Definieren Sie eine Middleware, um den /shop-Präfix zu entfernen
       - "traefik.http.middlewares.shop-ui-stripprefix.stripprefix.prefixes=/shop"
-      # 3. Middleware dem Router zuweisen
+      # 3. Weisen Sie die Middleware dem Router zu
       - "traefik.http.routers.shop-ui.middlewares=shop-ui-stripprefix"
-      # 4. Der interne Port des Nginx-Servers im Container ist 80
+      # 4. Leiten Sie die Anfrage an den internen Port 80 des Containers weiter
       - "traefik.http.services.shop-ui.loadbalancer.server.port=80"
 
   # --- INFRASTRUKTUR ---
