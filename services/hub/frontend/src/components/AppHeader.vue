@@ -74,9 +74,13 @@ function updateLoginState() {
 // Beim Logout:
 function handleLogout() {
   localStorage.removeItem('userId');
-  isLoggedIn.value = false; // Status sofort aktualisieren
-  userName.value = ''; // Namen leeren
-  router.push('/');
+  
+  // Setzt Variablen zurück (optisch schneller als der Reload)
+  isLoggedIn.value = false; 
+  userName.value = ''; 
+
+  // Erzwingt den Reload und geht zur Startseite
+  window.location.href = '/';
 }
 
 // Wenn die Komponente lädt (Seitenaufbau)
