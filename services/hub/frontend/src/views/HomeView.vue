@@ -11,7 +11,7 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
         
         <div @click="handleServiceClick('/wallet')" 
              class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1 cursor-pointer border border-base-300 group">
@@ -62,16 +62,39 @@
           </div>
         </div>
 
-        <div class="card bg-base-100 shadow-sm border border-base-300 opacity-70 relative overflow-hidden">
-          <div class="absolute top-3 right-3 badge badge-ghost">Coming Soon</div>
+        <div @click="handleServiceClick('/exchange')" 
+             class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1 cursor-pointer border border-base-300 group">
           <div class="card-body items-center text-center">
-            <div class="p-4 bg-accent/10 rounded-full mb-2">
+            <div class="p-4 bg-accent/10 rounded-full mb-2 group-hover:bg-accent/20 transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
               </svg>
             </div>
-            <h2 class="card-title">Exchange</h2>
+            <h2 class="card-title flex gap-2">
+                Exchange
+                <svg v-if="!isLoggedIn" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/40" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                </svg>
+            </h2>
             <p class="text-sm text-base-content/70">Trade carbon credits instantly.</p>
+            <div class="card-actions mt-4">
+              <button class="btn btn-sm btn-accent">
+                {{ isLoggedIn ? 'Start Trading' : 'Login to Access' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card bg-base-100 shadow-sm border border-base-300 opacity-70 relative overflow-hidden">
+          <div class="absolute top-3 right-3 badge badge-ghost">Coming Soon</div>
+          <div class="card-body items-center text-center">
+            <div class="p-4 bg-neutral/10 rounded-full mb-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-neutral" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h2 class="card-title">Green Jobs</h2>
+            <p class="text-sm text-base-content/70">Find sustainable career paths.</p>
             <div class="card-actions mt-4">
               <button class="btn btn-sm btn-disabled">Not Available</button>
             </div>
@@ -95,16 +118,14 @@ const isLoggedIn = ref(false);
 function handleServiceClick(externalUrl) {
   if (isLoggedIn.value) {
     // 1. If logged in, go to the other Micro-Frontend
-    // We must use window.location because it's a different container/app
     window.location.href = externalUrl; 
   } else {
-    // 2. If not logged in, stay in Hub and go to Register
-    // Optional: You could pass a query param like ?redirect=/wallet
+    // 2. If not logged in, go to Register
     router.push('/register'); 
   }
 }
 
-// --- AUTH LOGIC (Reused from your Navbar) ---
+// --- AUTH LOGIC ---
 async function checkLoginStatus() {
   const userId = localStorage.getItem('userId');
   
@@ -114,14 +135,12 @@ async function checkLoginStatus() {
   }
 
   try {
-    // We verify the token/ID is actually valid
     await axios.get('/api/user-service/me', {
       headers: { 'Authorization': `Bearer ${userId}` }
     });
     isLoggedIn.value = true;
   } catch (error) {
     console.error("Session invalid:", error);
-    // If backend rejects ID, clear local state
     localStorage.removeItem('userId');
     isLoggedIn.value = false;
   }

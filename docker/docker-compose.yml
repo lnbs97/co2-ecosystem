@@ -37,6 +37,25 @@ services:
       - "traefik.http.routers.exchange-backend.rule=PathPrefix(`/api/exchange-service`)"
       - "traefik.http.routers.exchange-backend.entrypoints=web"
       - "traefik.http.services.exchange-backend.loadbalancer.server.port=8080"
+  
+  exchange-ui:
+    container_name: exchange-ui
+    # Pfad zum Ordner mit dem Dockerfile (das wir gerade erstellt haben)
+    build: ../services/exchange/frontend
+    networks:
+      - co2-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.exchange-ui.rule=PathPrefix(`/exchange`)"
+      - "traefik.http.routers.exchange-ui.entrypoints=web"
+      
+      # 2. Middleware: StripPrefix definieren
+      - "traefik.http.middlewares.exchange-strip.stripprefix.prefixes=/exchange"
+      
+      # 3. Middleware an den Router binden
+      - "traefik.http.routers.exchange-ui.middlewares=exchange-strip"
+      
+      - "traefik.http.services.exchange-ui.loadbalancer.server.port=80"
 
   # --- HUB SERVICES (ROOT) ---
 
