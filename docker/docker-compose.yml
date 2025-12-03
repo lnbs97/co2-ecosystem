@@ -25,6 +25,42 @@ services:
       - "traefik.http.routers.dashboard.service=api@internal"
       - "traefik.http.routers.dashboard.entrypoints=dashboard"
 
+
+  # --- DASHBOARD SERVICE ---
+  dashboard-backend:
+    container_name: dashboard-backend
+    build: ../services/dashboard/backend
+    networks:
+      - co2-network
+    depends_on:
+      - rabbitmq
+    labels:
+      - "traefik.enable=true"
+      # The entrypoint for the backend API and WebSocket
+      - "traefik.http.routers.dashboard-backend.rule=PathPrefix(`/api/dashboard`)"
+      - "traefik.http.routers.dashboard-backend.entrypoints=web"
+
+      # Middleware to strip the path so Node sees root "/"
+      - "traefik.http.middlewares.dashboard-strip.stripprefix.prefixes=/api/dashboard"
+      - "traefik.http.routers.dashboard-backend.middlewares=dashboard-strip"
+
+      - "traefik.http.services.dashboard-backend.loadbalancer.server.port=8080"
+
+  dashboard-ui:
+    container_name: dashboard-ui
+    build: ../services/dashboard/frontend
+    networks:
+      - co2-network
+    labels:
+      - "traefik.enable=true"
+      # Frontend Endpoint
+      - "traefik.http.routers.dashboard-ui.rule=PathPrefix(`/dashboard`)"
+      - "traefik.http.routers.dashboard-ui.entrypoints=web"
+      # Strip prefix so Nginx serves 'index.html' from root
+      - "traefik.http.middlewares.dashboard-ui-strip.stripprefix.prefixes=/dashboard"
+      - "traefik.http.routers.dashboard-ui.middlewares=dashboard-ui-strip"
+      - "traefik.http.services.dashboard-ui.loadbalancer.server.port=80"
+
   # --- EXCHANGE SERVICE (/api/exchange-service) ---
   exchange-backend:
     container_name: exchange-backend
