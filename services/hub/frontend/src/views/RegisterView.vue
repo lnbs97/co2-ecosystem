@@ -26,6 +26,10 @@ async function handleDemoLogin() {
 
     window.dispatchEvent(new Event('storage-changed'));
 
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('toggle-onboarding-modal', { detail: { forceOpen: true } }));
+    }, 500);
+
     router.push('/') 
 
   } catch (error) {

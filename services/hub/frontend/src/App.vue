@@ -6,14 +6,16 @@
     <main class="w-full">
       <router-view />
     </main>
+
+    <OnboardingModal />
     
   </div>
 </template>
 
-<!-- 🚀 WICHTIG: Verwenden Sie <script setup> -->
 <script setup>
-// Imports werden automatisch im Template verfügbar gemacht
 import AppHeader from './components/AppHeader.vue';
+// ⭐️ Importiere das neue Modal
+import OnboardingModal from './components/OnboardingModal.vue';
 </script>
 
 <style>

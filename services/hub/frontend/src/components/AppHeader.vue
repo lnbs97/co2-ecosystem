@@ -1,13 +1,21 @@
 <template>
   <div class="navbar fixed top-0 left-0 right-0 z-50 bg-slate-950/80 backdrop-blur-md border-b border-slate-800 h-16">
     
-    <div class="flex-1">
+    <div class="flex items-center gap-4">
       <router-link to="/" class="btn btn-ghost hover:bg-transparent text-xl font-mono font-bold tracking-widest text-slate-100 hover:text-emerald-500 transition-colors">
         <span class="text-emerald-600 mr-2">EU::</span>CO2_HUB
       </router-link> 
+      
+      <button v-if="isLoggedIn" @click="openOnboardingModal" class="btn btn-sm btn-ghost hover:bg-slate-900 text-xs font-mono text-slate-400 hover:text-emerald-400 border border-transparent hover:border-slate-700 uppercase tracking-wider flex items-center gap-2 transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+          TASKS
+          <span class="flex h-2 w-2 relative">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+      </button>
     </div>
-
-    <div class="flex-none">
+    <div class="flex-none ml-auto">
 
       <ul v-if="isLoggedIn" class="menu menu-horizontal px-1 items-center gap-4">
         <li v-if="userName" class="hidden md:block text-xs font-mono text-slate-400 uppercase tracking-wider mr-2">
@@ -36,66 +44,56 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'; 
 import { useRouter } from 'vue-router';
-import axios from 'axios'; // ⭐️ NEU: Axios importieren
+import axios from 'axios'; 
 
+// ... (Rest des bestehenden Codes für Auth Logic bleibt gleich) ...
 const router = useRouter();
-const isLoggedIn = ref(false); // Beginnt standardmäßig als "ausgeloggt"
-const userName = ref(''); // ⭐️ NEU: Ref für den Vornamen
+const isLoggedIn = ref(false); 
+const userName = ref(''); 
 
-// ⭐️ NEUE FUNKTION: Holt Nutzerdaten vom Backend
+// ⭐️ NEUE FUNKTION: Feuert das Event, um das Modal zu öffnen
+function openOnboardingModal() {
+  // Wir senden ein Custom Event, auf das das Modal lauscht.
+  // Wir nutzen 'forceOpen: true', damit es sich sicher öffnet und nicht nur toggelt.
+  window.dispatchEvent(new CustomEvent('toggle-onboarding-modal', { detail: { forceOpen: true } }));
+}
+
+// --- AUTH LOGIC (UNVERÄNDERT) ---
 async function fetchUserData() {
   const userId = localStorage.getItem('userId');
   if (!userId) {
     isLoggedIn.value = false;
     userName.value = '';
-    return; // Nichts tun, wenn keine userId da ist
+    return; 
   }
-
   try {
-    // Rufe den NEUEN Backend-Endpunkt auf
-    // WICHTIG: Sende die userId im Authorization-Header
     const response = await axios.get('/api/user-service/me', {
-      headers: {
-        'Authorization': `Bearer ${userId}`
-      }
+      headers: { 'Authorization': `Bearer ${userId}` }
     });
-
-    // Speichere die Daten und setze den Status
     isLoggedIn.value = true;
-    userName.value = response.data.vorname; // Holt den Vornamen aus der Antwort
-
+    userName.value = response.data.vorname; 
   } catch (error) {
     console.error("Fehler beim Abrufen der Nutzerdaten:", error);
-    // Wenn der Nutzer nicht gefunden wurde (z.B. 404), logge ihn aus
-    handleLogout(); // Loggt den Nutzer aus (löscht die ungültige ID)
+    handleLogout(); 
   }
 }
 
-// ⭐️ ANGEPASST: Diese Funktion wird jetzt von überall aufgerufen
 function updateLoginState() {
-  // Wenn der Status sich ändert, versuche IMMER, die Nutzerdaten neu zu laden
   fetchUserData();
 }
 
-// Beim Logout:
 function handleLogout() {
   localStorage.removeItem('userId');
-  
-  // Setzt Variablen zurück (optisch schneller als der Reload)
   isLoggedIn.value = false; 
   userName.value = ''; 
-
-  // Erzwingt den Reload und geht zur Startseite
   window.location.href = '/';
 }
 
-// Wenn die Komponente lädt (Seitenaufbau)
 onMounted(() => {
-  updateLoginState(); // ⭐️ Lade Daten beim Start
-  window.addEventListener('storage-changed', updateLoginState); // Höre auf Login/Logout
+  updateLoginState(); 
+  window.addEventListener('storage-changed', updateLoginState); 
 });
 
-// Aufräumen
 onUnmounted(() => {
   window.removeEventListener('storage-changed', updateLoginState);
 });
