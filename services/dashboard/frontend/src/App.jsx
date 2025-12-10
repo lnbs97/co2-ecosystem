@@ -110,8 +110,16 @@ function App() {
                                         {evt.service || 'System'}
                                     </h3>
                                     <span className="text-xs text-gray-500 font-mono">
-                    {evt.timestamp ? new Date(evt.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString()}
-                  </span>
+                                      {evt.timestamp
+                                          ? new Date(evt.timestamp).toLocaleTimeString('de-DE', {
+                                              timeZone: 'Europe/Berlin',
+                                              hour: '2-digit',
+                                              minute: '2-digit',
+                                              second: '2-digit'
+                                          })
+                                          : new Date().toLocaleTimeString('de-DE', {timeZone: 'Europe/Berlin'})
+                                      }
+                                    </span>
                                 </div>
 
                                 <p className="text-gray-400 mt-1">{evt.message || JSON.stringify(evt.data)}</p>

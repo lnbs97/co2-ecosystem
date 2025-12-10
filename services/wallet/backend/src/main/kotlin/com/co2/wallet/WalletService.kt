@@ -1,11 +1,6 @@
 package com.co2.wallet
 
-import com.co2.wallet.dto.BalanceResponse
-import com.co2.wallet.dto.Co2TransferRequest
-import com.co2.wallet.dto.CombinedTransferRequest
-import com.co2.wallet.dto.CreateWalletRequest
-import com.co2.wallet.dto.MoneyTransferRequest
-import com.co2.wallet.dto.TransactionEvent
+import com.co2.wallet.dto.*
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -19,6 +14,9 @@ class WalletService(
     private val rabbitTemplate: RabbitTemplate
 ) {
 
+    private val SERVICE_NAME = "wallet-service"
+    private val EXCHANGE_NAME = "co2_events"
+
     fun createWallet(request: CreateWalletRequest): Wallet {
         if (walletRepository.findByUserId(request.userId) != null) {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Wallet for user ${request.userId} already exists.")
@@ -29,15 +27,21 @@ class WalletService(
             moneyBalance = request.moneyBalance
         )
         val savedWallet = walletRepository.save(wallet)
-        val event = TransactionEvent(
-            eventType = "WALLET_CREATED",
-            fromUserId = "",
-            toUserId = savedWallet.userId,
-            amount = 0.0,
-            description = "Wallet created",
-            timestamp = Instant.now()
+
+        // Neues Event-Format für den Bus
+        val systemEvent = SystemEvent(
+            source = SERVICE_NAME,
+            type = "WALLET_CREATED",
+            data = mapOf(
+                "userId" to savedWallet.userId,
+                "initialCo2" to request.co2Balance,
+                "initialMoney" to request.moneyBalance,
+                "description" to "Wallet created"
+            )
         )
-        rabbitTemplate.convertAndSend("demo_events_exchange", "", event)
+        // Senden mit Routing Key 'wallet.created'
+        rabbitTemplate.convertAndSend(EXCHANGE_NAME, "wallet.created", systemEvent)
+
         return savedWallet
     }
 
@@ -61,7 +65,8 @@ class WalletService(
         walletRepository.save(fromWallet)
         walletRepository.save(toWallet)
 
-        val event = TransactionEvent(
+        // 1. Objekt für die API-Antwort (Legacy/Frontend Compatibility)
+        val txEvent = TransactionEvent(
             eventType = "CO2_TRANSFER",
             fromUserId = fromUserId,
             toUserId = request.toUserId,
@@ -69,8 +74,23 @@ class WalletService(
             description = request.description,
             timestamp = Instant.now()
         )
-        // rabbitTemplate.convertAndSend("demo_events_exchange", "", event)
-        return event
+
+        // 2. Objekt für den Event Bus (Neues Format)
+        val systemEvent = SystemEvent(
+            source = SERVICE_NAME,
+            type = "CO2_TRANSFER",
+            data = mapOf(
+                "fromUserId" to fromUserId,
+                "toUserId" to request.toUserId,
+                "amount" to request.amount,
+                "description" to request.description
+            )
+        )
+
+        // Nachricht senden (jetzt aktiviert!)
+        rabbitTemplate.convertAndSend(EXCHANGE_NAME, "wallet.transfer.co2", systemEvent)
+
+        return txEvent
     }
 
     @Transactional
@@ -88,7 +108,8 @@ class WalletService(
         walletRepository.save(fromWallet)
         walletRepository.save(toWallet)
 
-        val event = TransactionEvent(
+        // API Response
+        val txEvent = TransactionEvent(
             eventType = "MONEY_TRANSFER",
             fromUserId = fromUserId,
             toUserId = request.toUserId,
@@ -96,8 +117,22 @@ class WalletService(
             description = request.description,
             timestamp = Instant.now()
         )
-        rabbitTemplate.convertAndSend("demo_events_exchange", "", event)
-        return event
+
+        // Bus Event
+        val systemEvent = SystemEvent(
+            source = SERVICE_NAME,
+            type = "MONEY_TRANSFER",
+            data = mapOf(
+                "fromUserId" to fromUserId,
+                "toUserId" to request.toUserId,
+                "amount" to request.amount,
+                "currency" to "EUR",
+                "description" to request.description
+            )
+        )
+
+        rabbitTemplate.convertAndSend(EXCHANGE_NAME, "wallet.transfer.money", systemEvent)
+        return txEvent
     }
 
     @Transactional
@@ -110,7 +145,6 @@ class WalletService(
         val insufficientCo2 = fromWallet.co2Balance < request.co2Amount
         val insufficientMoney = fromWallet.moneyBalance < request.moneyAmount
 
-        // Check both balances and provide specific error messages
         if (insufficientCo2 && insufficientMoney) {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient CO2 and money balance.")
         } else if (insufficientCo2) {
@@ -119,7 +153,6 @@ class WalletService(
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient money balance.")
         }
 
-        // Perform transfers
         fromWallet.co2Balance -= request.co2Amount
         toWallet.co2Balance += request.co2Amount
 
@@ -129,11 +162,11 @@ class WalletService(
         walletRepository.save(fromWallet)
         walletRepository.save(toWallet)
 
-        // Create and send events for each part of the transfer
-        val events = mutableListOf<TransactionEvent>()
+        val apiEvents = mutableListOf<TransactionEvent>()
 
+        // CO2 Teil-Event
         if (request.co2Amount > 0) {
-            val co2Event = TransactionEvent(
+            val co2Tx = TransactionEvent(
                 eventType = "CO2_TRANSFER",
                 fromUserId = fromUserId,
                 toUserId = request.toUserId,
@@ -141,12 +174,24 @@ class WalletService(
                 description = "${request.description} (CO2)",
                 timestamp = Instant.now()
             )
-            rabbitTemplate.convertAndSend("demo_events_exchange", "", co2Event)
-            events.add(co2Event)
+            apiEvents.add(co2Tx)
+
+            val co2Sys = SystemEvent(
+                source = SERVICE_NAME,
+                type = "CO2_TRANSFER",
+                data = mapOf(
+                    "fromUserId" to fromUserId,
+                    "toUserId" to request.toUserId,
+                    "amount" to request.co2Amount,
+                    "description" to "${request.description} (CO2)"
+                )
+            )
+            rabbitTemplate.convertAndSend(EXCHANGE_NAME, "wallet.transfer.co2", co2Sys)
         }
 
+        // Money Teil-Event
         if (request.moneyAmount > 0) {
-            val moneyEvent = TransactionEvent(
+            val moneyTx = TransactionEvent(
                 eventType = "MONEY_TRANSFER",
                 fromUserId = fromUserId,
                 toUserId = request.toUserId,
@@ -154,10 +199,21 @@ class WalletService(
                 description = "${request.description} (Money)",
                 timestamp = Instant.now()
             )
-            rabbitTemplate.convertAndSend("demo_events_exchange", "", moneyEvent)
-            events.add(moneyEvent)
+            apiEvents.add(moneyTx)
+
+            val moneySys = SystemEvent(
+                source = SERVICE_NAME,
+                type = "MONEY_TRANSFER",
+                data = mapOf(
+                    "fromUserId" to fromUserId,
+                    "toUserId" to request.toUserId,
+                    "amount" to request.moneyAmount,
+                    "description" to "${request.description} (Money)"
+                )
+            )
+            rabbitTemplate.convertAndSend(EXCHANGE_NAME, "wallet.transfer.money", moneySys)
         }
 
-        return events
+        return apiEvents
     }
 }

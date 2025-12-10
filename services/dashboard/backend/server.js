@@ -7,7 +7,7 @@ const cors = require('cors');
 // --- Configuration ---
 const PORT = 8080;
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://rabbitmq';
-const EXCHANGE_NAME = 'co2_events_fanout'; // We listen to everything published here
+const EXCHANGE_NAME = 'co2_events'; // We listen to everything published here
 
 // --- Setup Express & Socket.IO ---
 const app = express();
@@ -32,7 +32,7 @@ async function startRabbitConsumer() {
         // 1. Assert the Exchange
         // We use 'fanout' because we want to hear messages intended for anyone
         // (e.g., if WalletService sends a message, we want it AND the Ledger to hear it)
-        await channel.assertExchange(EXCHANGE_NAME, 'fanout', { durable: false });
+        await channel.assertExchange(EXCHANGE_NAME, 'topic', { durable: true });
 
         // 2. Create a Temporary Queue
         // Exclusive: true means when this connection closes, delete the queue
@@ -40,7 +40,7 @@ async function startRabbitConsumer() {
 
         // 3. Bind Queue to Exchange
         // This tells RabbitMQ: "Send a copy of everything from 'co2_events_fanout' to my temp queue"
-        await channel.bindQueue(q.queue, EXCHANGE_NAME, '');
+        await channel.bindQueue(q.queue, EXCHANGE_NAME, '#'); // '#' = all routing keys
 
         console.log(`[RABBIT] Connected! Waiting for events in queue: ${q.queue}`);
 
@@ -51,11 +51,25 @@ async function startRabbitConsumer() {
                     const contentString = msg.content.toString();
                     const contentJSON = JSON.parse(contentString);
 
-                    console.log(`[EVENT RECEIVED] ${contentJSON.service}: ${contentJSON.type}`);
+                    // Wir bauen ein Objekt für das Frontend, das auf der neuen Struktur basiert
+                    const frontendEvent = {
+                        // Top-Level Felder direkt übernehmen
+                        service: contentJSON.source, // vorher "service" nicht vorhanden, jetzt "source"
+                        type: contentJSON.type,
+                        timestamp: contentJSON.timestamp,
 
-                    // 5. Broadcast to Frontend
-                    // This pushes the data to every connected browser instantly
-                    io.emit('dashboard_event', contentJSON);
+                        // Nachricht generieren (Fallback, falls 'description' fehlt)
+                        message: contentJSON.data.description || `Event ${contentJSON.type} empfangen`,
+
+                        // Optional: Die gesamten Daten mitschicken, falls das Frontend Details braucht
+                        details: contentJSON.data,
+
+                        // Für die Anzeige "Sent/Received" im Frontend brauchen wir den 'amount'
+                        // Der liegt jetzt aber verschachtelt in 'data'
+                        amount: contentJSON.data.amount
+                    };
+
+                    io.emit('dashboard_event', frontendEvent);
 
                 } catch (err) {
                     console.error('[ERROR] Could not parse message:', err);

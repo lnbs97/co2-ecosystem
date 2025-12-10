@@ -11,7 +11,7 @@ class EventBusConfig {
 
     @Bean
     fun topicExchange(): TopicExchange {
-        return TopicExchange("demo_events_exchange")
+        return TopicExchange("co2_events")
     }
 
     @Bean
