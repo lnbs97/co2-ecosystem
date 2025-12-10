@@ -1,5 +1,6 @@
 const express = require('express');
-const http = require('http');
+const http = require('http'); // Server für Socket.IO
+const httpClient = require('http'); // Client für interne Requests an Hub
 const { Server } = require("socket.io");
 const amqp = require('amqplib');
 const cors = require('cors');
@@ -7,20 +8,68 @@ const cors = require('cors');
 // --- Configuration ---
 const PORT = 8080;
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://rabbitmq';
-const EXCHANGE_NAME = 'co2_events'; // We listen to everything published here
+const EXCHANGE_NAME = 'co2_events';
+// URL zum User-Service (Hub) innerhalb des Docker-Netzwerks
+const HUB_HOST = 'hub-backend';
+const HUB_PORT = 8080;
 
 // --- Setup Express & Socket.IO ---
 const app = express();
-app.use(cors()); // Allow all origins (simplify dev)
+app.use(cors());
 
 const server = http.createServer(app);
 const io = new Server(server, {
-    path: '/socket.io', // The path the client will ping
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+    path: '/socket.io',
+    cors: { origin: "*", methods: ["GET", "POST"] }
 });
+
+// --- User Name Resolution Helper ---
+// Cache, damit wir nicht für jedes Event den Hub fragen müssen
+const userCache = {};
+
+function resolveUser(userId) {
+    if (!userId) return Promise.resolve('Unbekannt');
+
+    // 1. Bekannte System-Accounts direkt auflösen
+    if (userId === 'exchange') return Promise.resolve('Exchange)');
+    if (userId === 'shop-eco-fashion') return Promise.resolve('Fashion Shop');
+
+    // 2. Cache prüfen
+    if (userCache[userId]) return Promise.resolve(userCache[userId]);
+
+    // 3. User-Service fragen
+    return new Promise((resolve) => {
+        const options = {
+            hostname: HUB_HOST,
+            port: HUB_PORT,
+            path: `/api/user-service/users/${userId}`,
+            method: 'GET',
+            timeout: 1000 // Schneller Failover, falls Hub down ist
+        };
+
+        const req = httpClient.request(options, (res) => {
+            let data = '';
+            res.on('data', (chunk) => data += chunk);
+            res.on('end', () => {
+                if (res.statusCode === 200) {
+                    try {
+                        const user = JSON.parse(data);
+                        if (user && user.vorname) {
+                            userCache[userId] = user.vorname;
+                            resolve(user.vorname);
+                            return;
+                        }
+                    } catch (e) { /* ignore parse error */ }
+                }
+                // Fallback: Die ersten Zeichen der ID anzeigen
+                resolve(`User ${userId.substring(0, 5)}...`);
+            });
+        });
+
+        req.on('error', () => resolve(`User ${userId.substring(0, 5)}...`));
+        req.end();
+    });
+}
 
 // --- RabbitMQ Logic ---
 async function startRabbitConsumer() {
@@ -29,59 +78,57 @@ async function startRabbitConsumer() {
         const connection = await amqp.connect(RABBITMQ_URL);
         const channel = await connection.createChannel();
 
-        // 1. Assert the Exchange
-        // We use 'fanout' because we want to hear messages intended for anyone
-        // (e.g., if WalletService sends a message, we want it AND the Ledger to hear it)
         await channel.assertExchange(EXCHANGE_NAME, 'topic', { durable: true });
-
-        // 2. Create a Temporary Queue
-        // Exclusive: true means when this connection closes, delete the queue
         const q = await channel.assertQueue('', { exclusive: true });
+        await channel.bindQueue(q.queue, EXCHANGE_NAME, '#');
 
-        // 3. Bind Queue to Exchange
-        // This tells RabbitMQ: "Send a copy of everything from 'co2_events_fanout' to my temp queue"
-        await channel.bindQueue(q.queue, EXCHANGE_NAME, '#'); // '#' = all routing keys
+        console.log(`[RABBIT] Connected! Waiting for events...`);
 
-        console.log(`[RABBIT] Connected! Waiting for events in queue: ${q.queue}`);
-
-        // 4. Consume Messages
-        channel.consume(q.queue, (msg) => {
+        channel.consume(q.queue, async (msg) => {
             if (msg.content) {
                 try {
-                    const contentString = msg.content.toString();
-                    const contentJSON = JSON.parse(contentString);
+                    const contentJSON = JSON.parse(msg.content.toString());
+                    const data = contentJSON.data || {};
+                    const type = contentJSON.type;
 
-                    // Wir bauen ein Objekt für das Frontend, das auf der neuen Struktur basiert
+                    // --- NACHRICHT FORMATIEREN ---
+                    let readableMessage = data.description || `Event ${type}`;
+
+                    // Je nach Typ die Namen auflösen und Text bauen
+                    if (type === 'WALLET_CREATED') {
+                        const name = await resolveUser(data.userId);
+                        readableMessage = `Wallet created for ${name}`;
+                    }
+                    else if (type === 'CO2_TRANSFER') {
+                        const from = await resolveUser(data.fromUserId);
+                        const to = await resolveUser(data.toUserId);
+                        readableMessage = `${from} sent ${data.amount} CO2 to ${to}`;
+                    }
+                    else if (type === 'MONEY_TRANSFER') {
+                        const from = await resolveUser(data.fromUserId);
+                        const to = await resolveUser(data.toUserId);
+                        readableMessage = `${from} sent ${data.amount}€ to ${to}`;
+                    }
+
+                    // Frontend Event bauen
                     const frontendEvent = {
-                        // Top-Level Felder direkt übernehmen
-                        service: contentJSON.source, // vorher "service" nicht vorhanden, jetzt "source"
-                        type: contentJSON.type,
+                        service: contentJSON.source,
+                        type: type,
                         timestamp: contentJSON.timestamp,
-
-                        // Nachricht generieren (Fallback, falls 'description' fehlt)
-                        message: contentJSON.data.description || `Event ${contentJSON.type} empfangen`,
-
-                        // Optional: Die gesamten Daten mitschicken, falls das Frontend Details braucht
-                        details: contentJSON.data,
-
-                        // Für die Anzeige "Sent/Received" im Frontend brauchen wir den 'amount'
-                        // Der liegt jetzt aber verschachtelt in 'data'
-                        amount: contentJSON.data.amount
+                        message: readableMessage, // Hier ist jetzt der schöne Text
+                        amount: data.amount,
+                        details: data
                     };
 
                     io.emit('dashboard_event', frontendEvent);
 
                 } catch (err) {
-                    console.error('[ERROR] Could not parse message:', err);
+                    console.error('[ERROR] Processing message:', err);
                 }
             }
-        }, { noAck: true }); // noAck: We don't need to confirm receipt, speed is key here
+        }, { noAck: true });
 
-        // Handle connection closure
-        connection.on('close', () => {
-            console.error('[RABBIT] Connection closed, retrying...');
-            setTimeout(startRabbitConsumer, 5000);
-        });
+        connection.on('close', () => setTimeout(startRabbitConsumer, 5000));
 
     } catch (error) {
         console.error('[RABBIT] Connection failed (retrying in 5s):', error.message);
@@ -91,18 +138,11 @@ async function startRabbitConsumer() {
 
 // --- Start Services ---
 io.on('connection', (socket) => {
-    console.log(`[WEBSOCKET] Client connected: ${socket.id}`);
-
-    // Send a welcome message just to verify connection works
     socket.emit('dashboard_event', {
         service: 'Dashboard',
         type: 'INFO',
-        data: { message: 'Connected to Realtime Stream' },
+        message: 'Connected to Global Event Stream',
         timestamp: new Date().toISOString()
-    });
-
-    socket.on('disconnect', () => {
-        console.log(`[WEBSOCKET] Client disconnected: ${socket.id}`);
     });
 });
 
