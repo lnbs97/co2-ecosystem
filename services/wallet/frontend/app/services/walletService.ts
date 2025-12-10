@@ -1,5 +1,5 @@
 const API_URL = '/api/wallet';
-const USER_SERVICE_URL = '/api/user-service'; // Neuer Pfad zum Hub
+const USER_SERVICE_URL = '/api/user-service';
 
 const getAuthHeaders = () => {
     const userId = localStorage.getItem('userId');
@@ -51,7 +51,6 @@ export interface TransactionEvent {
     timestamp: string;
 }
 
-// Neues Interface für die User-Liste
 export interface User {
     userId: string;
     vorname: string;
@@ -73,11 +72,10 @@ export const getBalance = async (): Promise<BalanceResponse> => {
     return response.json();
 }
 
-// Neue Funktion: Holt User-Liste vom Hub Service
 export const getUsers = async (): Promise<User[]> => {
     const response = await fetch(`${USER_SERVICE_URL}/users`);
     if (!response.ok) {
-        throw new Error('Konnte User-Liste nicht laden');
+        throw new Error('Could not load user list'); // Übersetzt
     }
     return response.json();
 }
