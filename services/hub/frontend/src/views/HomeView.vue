@@ -1,9 +1,22 @@
 <template>
-  <hero class="min-h-screen bg-base-200 flex flex-col justify-center items-center">
+  <div class="min-h-screen bg-base-200 flex flex-col justify-center items-center">
     <div class="hero-content text-center flex-col">
       
       <div class="max-w-md mb-10">
-        <h1 class="text-5xl font-bold">Welcome to CO2 Ecosystem Hub</h1>
+        <h1 class="font-bold">
+            <!-- Eingeloggter Zustand: 3 Zeilen -->
+            <div v-if="isLoggedIn && userName" class="flex flex-col items-center gap-1">
+                <span class="text-4xl">Willkommen</span>
+                <!-- Name größer und in Primary-Farbe -->
+                <span class="text-6xl md:text-7xl text-primary font-extrabold py-2">{{ userName }}</span>
+                <!-- Rest wieder im Stil von Zeile 1 (bzw. kleiner als Name) -->
+                <span class="text-4xl">auf dem CO2 Hub</span>
+            </div>
+            
+            <!-- Ausgeloggter Zustand: Standard -->
+            <span v-else class="text-5xl">Welcome to CO2 Ecosystem Hub</span>
+        </h1>
+        
         <p class="py-6">Your gateway to managing and monitoring CO2 emissions effectively.</p>
         
         <div v-if="!isLoggedIn">
@@ -13,6 +26,7 @@
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
         
+        <!-- Wallet Card -->
         <div @click="handleServiceClick('/wallet')" 
              class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1 cursor-pointer border border-base-300 group">
           <div class="card-body items-center text-center">
@@ -39,6 +53,7 @@
           </div>
         </div>
 
+        <!-- Shop Card -->
         <div @click="handleServiceClick('/shop')" 
              class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1 cursor-pointer border border-base-300 group">
           <div class="card-body items-center text-center">
@@ -62,6 +77,7 @@
           </div>
         </div>
 
+        <!-- Exchange Card -->
         <div @click="handleServiceClick('/exchange')" 
              class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1 cursor-pointer border border-base-300 group">
           <div class="card-body items-center text-center">
@@ -85,6 +101,7 @@
           </div>
         </div>
 
+        <!-- Green Jobs (Coming Soon) -->
         <div class="card bg-base-100 shadow-sm border border-base-300 opacity-70 relative overflow-hidden">
           <div class="absolute top-3 right-3 badge badge-ghost">Coming Soon</div>
           <div class="card-body items-center text-center">
@@ -103,7 +120,7 @@
 
       </div>
     </div>
-  </hero>
+  </div>
 </template>
 
 <script setup>
@@ -113,40 +130,45 @@ import axios from 'axios';
 
 const router = useRouter();
 const isLoggedIn = ref(false);
+const userName = ref(''); // ⭐️ Neuer State für den Namen
 
 // --- NAVIGATION LOGIC ---
 function handleServiceClick(externalUrl) {
   if (isLoggedIn.value) {
-    // 1. If logged in, go to the other Micro-Frontend
     window.location.href = externalUrl; 
   } else {
-    // 2. If not logged in, go to Register
     router.push('/register'); 
   }
 }
 
 // --- AUTH LOGIC ---
-async function checkLoginStatus() {
+async function fetchUserData() {
   const userId = localStorage.getItem('userId');
   
   if (!userId) {
     isLoggedIn.value = false;
+    userName.value = '';
     return;
   }
 
   try {
-    await axios.get('/api/user-service/me', {
+    // API Call, um den Namen zu holen
+    const response = await axios.get('/api/user-service/me', {
       headers: { 'Authorization': `Bearer ${userId}` }
     });
+    
     isLoggedIn.value = true;
+    userName.value = response.data.vorname; // Name speichern
+    
   } catch (error) {
     console.error("Session invalid:", error);
     localStorage.removeItem('userId');
     isLoggedIn.value = false;
+    userName.value = '';
   }
 }
 
 onMounted(() => {
-  checkLoginStatus();
+  fetchUserData();
 });
 </script>

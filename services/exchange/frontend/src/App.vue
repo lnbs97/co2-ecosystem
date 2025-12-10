@@ -10,18 +10,18 @@ import {
 } from 'lucide-vue-next';
 
 // --- KONFIGURATION ---
-// Relativer Pfad, da Traefik das Routing übernimmt
 const API_BASE = "/api/exchange-service";
+const USER_API_BASE = "/api/user-service"; // Neu: Pfad zum User Service
 
 // --- STATE ---
 const storedUserId = localStorage.getItem('userId');
-// Falls keine ID da ist, bleibt currentUser leer -> UI zeigt Warnung
-const currentUser = ref(storedUserId ? { id: storedUserId } : null);
+const currentUser = ref(storedUserId ? { id: storedUserId, name: '...' } : null);
 
 const balance = ref({ eur: 0, tokens: 0 });
 const orders = ref([]);
 const loading = ref(false);
 const message = ref({ text: "", type: "" });
+const userNames = ref({}); // Cache für Namen: { "uuid": "Max" }
 
 const newOrder = ref({
     type: "buy",
@@ -48,7 +48,6 @@ const api = {
 
         const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
         
-        // Versuche JSON zu parsen, auch bei Fehlern
         let data;
         try {
             data = await res.json();
@@ -78,17 +77,55 @@ const api = {
 };
 
 // --- ACTIONS ---
+
+// Neu: Lädt den Namen zu einer UUID
+const fetchUserName = async (userId) => {
+    // Wenn wir den Namen schon haben oder es der eigene User ist, abbrechen
+    if (userNames.value[userId]) return;
+    if (userId === currentUser.value.id) return; 
+
+    try {
+        const res = await fetch(`${USER_API_BASE}/users/${userId}`);
+        if (res.ok) {
+            const data = await res.json();
+            userNames.value[userId] = data.vorname;
+        } else {
+            userNames.value[userId] = "Unbekannt";
+        }
+    } catch (e) {
+        console.error("Konnte Name nicht laden", e);
+        userNames.value[userId] = "Fehler";
+    }
+};
+
+// Neu: Lädt den eigenen Namen (optional, für Anzeige oben rechts)
+const fetchMyName = async () => {
+    if (!currentUser.value?.id) return;
+    try {
+        const res = await fetch(`${USER_API_BASE}/users/${currentUser.value.id}`);
+        if (res.ok) {
+            const data = await res.json();
+            currentUser.value.name = data.vorname;
+        }
+    } catch (e) { console.error(e); }
+};
+
 const fetchData = async () => {
     if (!isLoggedIn.value) return;
     loading.value = true;
     try {
-        // Parallel laden für Speed
         const [bal, ord] = await Promise.all([
             api.get('/balance'),
             api.get('/orders')
         ]);
         balance.value = bal;
         orders.value = ord;
+
+        // Neu: Für jede Order den Namen nachladen, falls noch nicht bekannt
+        ord.forEach(order => {
+            fetchUserName(order.user_id);
+        });
+
     } catch (e) {
         showMessage("Ladefehler: " + e.message, "error");
     } finally {
@@ -101,7 +138,6 @@ const createOrder = async () => {
     try {
         await api.post('/orders', { ...newOrder.value });
         showMessage("Order erfolgreich erstellt!", "success");
-        // Reset Form
         newOrder.value.amount_token = null;
         newOrder.value.amount_cash = null;
         await fetchData();
@@ -124,7 +160,7 @@ const deleteOrder = async (orderId) => {
 };
 
 const acceptOrder = async (order) => {
-    if(!confirm("Trade ausführen?")) return;
+    if(!confirm(`Trade ausführen mit ${userNames.value[order.user_id] || 'dem Nutzer'}?`)) return;
     try {
         await api.post(`/orders/${order.order_id}/accept`, {});
         showMessage("Trade erfolgreich!", "success");
@@ -147,8 +183,8 @@ const showMessage = (text, type) => {
 // --- LIFECYCLE ---
 onMounted(() => {
     if (isLoggedIn.value) {
+        fetchMyName(); // Eigenen Namen laden
         fetchData();
-        // Auto-Refresh alle 5 Sekunden
         setInterval(fetchData, 5000);
     }
 });
@@ -194,10 +230,12 @@ onMounted(() => {
                 <div class="dropdown dropdown-end">
                     <label tabindex="0" class="btn btn-ghost btn-circle avatar placeholder">
                         <div class="bg-neutral-focus text-neutral-content rounded-full w-10">
-                            <span>{{ currentUser?.id?.charAt(0).toUpperCase() || '?' }}</span>
+                            <!-- Erster Buchstabe des Namens oder '?' -->
+                            <span>{{ currentUser?.name?.charAt(0).toUpperCase() || currentUser?.id?.charAt(0).toUpperCase() || '?' }}</span>
                         </div>
                     </label>
                     <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-64 break-all">
+                        <li><a class="font-bold">{{ currentUser?.name || 'Lade...' }}</a></li>
                         <li><a class="text-xs text-gray-500">ID: {{ currentUser?.id }}</a></li>
                     </ul>
                 </div>
@@ -283,8 +321,9 @@ onMounted(() => {
                                         <td class="font-mono font-bold">{{ order.amount_token }}</td>
                                         <td class="font-mono">{{ formatCurrency(order.amount_cash) }}</td>
                                         <td>
+                                            <!-- HIER IST DIE ÄNDERUNG: Name statt ID -->
                                             <span class="text-xs" :class="{'font-bold': isMyOrder(order)}">
-                                                {{ isMyOrder(order) ? 'Du' : order.user_id.substring(0,8) + '...' }}
+                                                {{ isMyOrder(order) ? 'Du' : (userNames[order.user_id] || 'Lade...') }}
                                             </span>
                                         </td>
                                         <td>

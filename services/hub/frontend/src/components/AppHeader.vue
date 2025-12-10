@@ -1,12 +1,7 @@
 <template>
   <div class="navbar bg-base-100 shadow-xl">
     <div class="flex-1">
-      <router-link to="/" class="btn btn-ghost text-xl">Mein Hub</router-link>
-      
-      <span v-if="isLoggedIn && userName" class="ml-4 font-semibold">
-        Hallo, {{ userName }}!
-      </span>
-      
+      <router-link to="/" class="btn btn-ghost text-xl">CO2 Hub</router-link> 
     </div>
     <div class="flex-none">
 
