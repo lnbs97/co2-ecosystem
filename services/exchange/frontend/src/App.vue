@@ -1,30 +1,33 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { 
-  Leaf, 
-  PlusCircle, 
-  List, 
-  RefreshCw, 
-  AlertCircle, 
-  CheckCircle 
+  ArrowUpRight, 
+  ArrowDownRight, 
+  RefreshCcw, 
+  Wallet, 
+  TrendingUp,
+  X
 } from 'lucide-vue-next';
 
-// --- KONFIGURATION ---
+// --- CONFIGURATION ---
 const API_BASE = "/api/exchange-service";
-const USER_API_BASE = "/api/user-service"; // Neu: Pfad zum User Service
+const USER_API_BASE = "/api/user-service";
 
 // --- STATE ---
 const storedUserId = localStorage.getItem('userId');
-const currentUser = ref(storedUserId ? { id: storedUserId, name: '...' } : null);
+const currentUser = ref(storedUserId ? { id: storedUserId, name: '' } : null);
 
 const balance = ref({ eur: 0, tokens: 0 });
 const orders = ref([]);
 const loading = ref(false);
 const message = ref({ text: "", type: "" });
-const userNames = ref({}); // Cache für Namen: { "uuid": "Max" }
+const userNames = ref({}); 
+
+// Default to 'buy' mode
+const tradeMode = ref('buy'); // 'buy' or 'sell' UI toggle
 
 const newOrder = ref({
-    type: "buy",
+    type: "buy", 
     amount_token: null,
     amount_cash: null
 });
@@ -39,30 +42,18 @@ const isLoggedIn = computed(() => !!currentUser.value);
 // --- API CLIENT ---
 const api = {
     async request(endpoint, options = {}) {
-        if (!isLoggedIn.value) throw new Error("Nicht eingeloggt");
-
-        const headers = { 
-            'X-User-ID': currentUser.value.id,
-            ...options.headers 
-        };
-
+        if (!isLoggedIn.value) throw new Error("Authentication missing");
+        const headers = { 'X-User-ID': currentUser.value.id, ...options.headers };
         const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
         
         let data;
-        try {
-            data = await res.json();
-        } catch (e) {
-            data = { error: await res.text() || res.statusText };
-        }
+        try { data = await res.json(); } 
+        catch (e) { data = { error: await res.text() || res.statusText }; }
 
-        if (!res.ok) throw new Error(data.error || 'Unbekannter Fehler');
+        if (!res.ok) throw new Error(data.error || 'Unknown Error');
         return data;
     },
-
-    get(endpoint) {
-        return this.request(endpoint);
-    },
-
+    get(endpoint) { return this.request(endpoint); },
     post(endpoint, body) {
         return this.request(endpoint, {
             method: 'POST',
@@ -70,35 +61,25 @@ const api = {
             body: JSON.stringify(body)
         });
     },
-
-    delete(endpoint) {
-        return this.request(endpoint, { method: 'DELETE' });
-    }
+    delete(endpoint) { return this.request(endpoint, { method: 'DELETE' }); }
 };
 
-// --- ACTIONS ---
-
-// Neu: Lädt den Namen zu einer UUID
+// --- LOGIC ---
 const fetchUserName = async (userId) => {
-    // Wenn wir den Namen schon haben oder es der eigene User ist, abbrechen
     if (userNames.value[userId]) return;
-    if (userId === currentUser.value.id) return; 
-
+    if (userId === currentUser.value.id && currentUser.value.name) {
+        userNames.value[userId] = currentUser.value.name;
+        return;
+    }
     try {
         const res = await fetch(`${USER_API_BASE}/users/${userId}`);
         if (res.ok) {
             const data = await res.json();
             userNames.value[userId] = data.vorname;
-        } else {
-            userNames.value[userId] = "Unbekannt";
-        }
-    } catch (e) {
-        console.error("Konnte Name nicht laden", e);
-        userNames.value[userId] = "Fehler";
-    }
+        } else { userNames.value[userId] = "Unknown"; }
+    } catch (e) { userNames.value[userId] = "Unknown"; }
 };
 
-// Neu: Lädt den eigenen Namen (optional, für Anzeige oben rechts)
 const fetchMyName = async () => {
     if (!currentUser.value?.id) return;
     try {
@@ -106,6 +87,7 @@ const fetchMyName = async () => {
         if (res.ok) {
             const data = await res.json();
             currentUser.value.name = data.vorname;
+            userNames.value[currentUser.value.id] = data.vorname; 
         }
     } catch (e) { console.error(e); }
 };
@@ -120,14 +102,9 @@ const fetchData = async () => {
         ]);
         balance.value = bal;
         orders.value = ord;
-
-        // Neu: Für jede Order den Namen nachladen, falls noch nicht bekannt
-        ord.forEach(order => {
-            fetchUserName(order.user_id);
-        });
-
+        ord.forEach(order => fetchUserName(order.user_id));
     } catch (e) {
-        showMessage("Ladefehler: " + e.message, "error");
+        showMessage("Connection Error", "error");
     } finally {
         loading.value = false;
     }
@@ -135,9 +112,12 @@ const fetchData = async () => {
 
 const createOrder = async () => {
     loading.value = true;
+    // Set type based on current UI tab
+    newOrder.value.type = tradeMode.value;
+    
     try {
         await api.post('/orders', { ...newOrder.value });
-        showMessage("Order erfolgreich erstellt!", "success");
+        showMessage("Order Placed", "success");
         newOrder.value.amount_token = null;
         newOrder.value.amount_cash = null;
         await fetchData();
@@ -149,206 +129,214 @@ const createOrder = async () => {
 };
 
 const deleteOrder = async (orderId) => {
-    if(!confirm("Order wirklich löschen?")) return;
     try {
         await api.delete(`/orders/${orderId}`);
-        showMessage("Order gelöscht", "success");
         await fetchData();
-    } catch (e) {
-        showMessage(e.message, "error");
-    }
+    } catch (e) { showMessage(e.message, "error"); }
 };
 
 const acceptOrder = async (order) => {
-    if(!confirm(`Trade ausführen mit ${userNames.value[order.user_id] || 'dem Nutzer'}?`)) return;
     try {
         await api.post(`/orders/${order.order_id}/accept`, {});
-        showMessage("Trade erfolgreich!", "success");
+        showMessage("Transaction Successful", "success");
         await fetchData();
-    } catch (e) {
-        showMessage(e.message, "error");
-    }
+    } catch (e) { showMessage(e.message, "error"); }
 };
 
-// --- UTILS ---
+// --- HELPER ---
 const isMyOrder = (order) => order.user_id === currentUser.value?.id;
-
 const formatCurrency = (val) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(val);
 
 const showMessage = (text, type) => {
     message.value = { text, type };
-    setTimeout(() => message.value = { text: "", type: "" }, 4000);
+    setTimeout(() => message.value = { text: "", type: "" }, 3000);
 };
 
-// --- LIFECYCLE ---
 onMounted(() => {
     if (isLoggedIn.value) {
-        fetchMyName(); // Eigenen Namen laden
+        fetchMyName();
         fetchData();
-        setInterval(fetchData, 5000);
+        setInterval(fetchData, 4000); 
     }
 });
 </script>
 
 <template>
-  <div class="min-h-screen bg-base-200 p-4 font-sans">
+  <div class="min-h-screen bg-black text-white font-sans pt-24 pb-12 px-4 selection:bg-emerald-500/30">
     
-    <!-- LOGIN WARNING OVERLAY -->
-    <div v-if="!isLoggedIn" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div class="card w-96 bg-base-100 shadow-xl">
-            <div class="card-body text-center items-center">
-                <AlertCircle class="w-16 h-16 text-error mb-2" />
-                <h2 class="card-title">Nicht eingeloggt</h2>
-                <p>Bitte logge dich zuerst über den HUB ein, um auf die Börse zuzugreifen.</p>
-                <div class="card-actions justify-end mt-4">
-                    <a href="/" class="btn btn-primary">Zum Hub</a>
+    <div class="max-w-6xl mx-auto">
+        
+        <div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-6">
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight mb-1">Portfolio</h1>
+                <div class="flex items-center gap-2 text-zinc-400 text-sm">
+                    <span>Welcome back, {{ currentUser?.name || '...' }}</span>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <div class="max-w-6xl mx-auto" :class="{ 'blur-sm pointer-events-none': !isLoggedIn }">
-        <!-- Navbar -->
-        <div class="navbar bg-base-100 rounded-box shadow-lg mb-6">
-            <div class="flex-1">
-                <a class="btn btn-ghost normal-case text-xl text-primary gap-2">
-                    <Leaf class="w-6 h-6" /> EcoExchange
-                </a>
-            </div>
-            <div class="flex-none gap-4">
-                <div class="stats shadow scale-90 sm:scale-100 bg-base-200">
-                    <div class="stat p-2 place-items-center">
-                        <div class="stat-title text-xs">Wallet (EUR)</div>
-                        <div class="stat-value text-success text-lg">{{ formatCurrency(balance.eur) }}</div>
-                    </div>
-                    <div class="stat p-2 place-items-center">
-                        <div class="stat-title text-xs">CO2 Tokens</div>
-                        <div class="stat-value text-secondary text-lg">{{ balance.tokens }}</div>
-                    </div>
+            <div class="flex gap-6">
+                <div class="text-right">
+                    <span class="block text-xs font-medium text-zinc-500 uppercase tracking-wide">Cash Balance</span>
+                    <span class="text-2xl font-bold tracking-tight">{{ formatCurrency(balance.eur) }}</span>
                 </div>
-
-                <div class="dropdown dropdown-end">
-                    <label tabindex="0" class="btn btn-ghost btn-circle avatar placeholder">
-                        <div class="bg-neutral-focus text-neutral-content rounded-full w-10">
-                            <!-- Erster Buchstabe des Namens oder '?' -->
-                            <span>{{ currentUser?.name?.charAt(0).toUpperCase() || currentUser?.id?.charAt(0).toUpperCase() || '?' }}</span>
-                        </div>
-                    </label>
-                    <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-64 break-all">
-                        <li><a class="font-bold">{{ currentUser?.name || 'Lade...' }}</a></li>
-                        <li><a class="text-xs text-gray-500">ID: {{ currentUser?.id }}</a></li>
-                    </ul>
+                <div class="text-right border-l border-zinc-800 pl-6">
+                    <span class="block text-xs font-medium text-zinc-500 uppercase tracking-wide">Carbon Assets</span>
+                    <span class="text-2xl font-bold tracking-tight text-emerald-400">{{ balance.tokens }} <span class="text-sm text-emerald-600">CT</span></span>
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Create Order -->
-            <div class="card bg-base-100 shadow-xl h-fit">
-                <div class="card-body">
-                    <h2 class="card-title text-base-content flex gap-2">
-                        <PlusCircle class="w-5 h-5" /> Neue Order
-                    </h2>
+        <transition enter-from-class="opacity-0 translate-y-2" leave-to-class="opacity-0 translate-y-2">
+            <div v-if="message.text" class="fixed bottom-6 right-6 z-50 bg-zinc-800 border border-zinc-700 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300">
+                <div class="h-2 w-2 rounded-full" :class="message.type === 'error' ? 'bg-rose-500' : 'bg-emerald-500'"></div>
+                <span class="text-sm font-medium">{{ message.text }}</span>
+            </div>
+        </transition>
+
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <div class="lg:col-span-4">
+                <div class="bg-zinc-900 rounded-2xl p-6 sticky top-24 border border-zinc-800/50 shadow-xl">
                     
-                    <div class="form-control w-full">
-                        <label class="label"><span class="label-text">Ich möchte...</span></label>
-                        <div class="join w-full">
-                            <input class="join-item btn w-1/2" :class="{'btn-primary': newOrder.type === 'buy'}" type="radio" value="buy" v-model="newOrder.type" aria-label="Kaufen" />
-                            <input class="join-item btn w-1/2" :class="{'btn-secondary': newOrder.type === 'sell'}" type="radio" value="sell" v-model="newOrder.type" aria-label="Verkaufen" />
+                    <div class="bg-black rounded-lg p-1 flex mb-6">
+                        <button 
+                            @click="tradeMode = 'buy'"
+                            class="flex-1 py-2 text-sm font-bold rounded-md transition-all duration-200"
+                            :class="tradeMode === 'buy' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'"
+                        >
+                            Buy
+                        </button>
+                        <button 
+                            @click="tradeMode = 'sell'"
+                            class="flex-1 py-2 text-sm font-bold rounded-md transition-all duration-200"
+                            :class="tradeMode === 'sell' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'"
+                        >
+                            Sell
+                        </button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="group">
+                            <label class="block text-xs font-medium text-zinc-500 mb-1.5 ml-1">Quantity (CT)</label>
+                            <div class="relative">
+                                <input 
+                                    type="number" 
+                                    v-model.number="newOrder.amount_token" 
+                                    class="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-lg font-medium text-white placeholder-zinc-700 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all"
+                                    placeholder="0"
+                                >
+                                <div class="absolute right-4 top-3.5 text-zinc-600 text-sm font-medium">Tokens</div>
+                            </div>
+                        </div>
+
+                        <div class="group">
+                            <label class="block text-xs font-medium text-zinc-500 mb-1.5 ml-1">Total Price (€)</label>
+                            <div class="relative">
+                                <input 
+                                    type="number" 
+                                    v-model.number="newOrder.amount_cash" 
+                                    class="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-lg font-medium text-white placeholder-zinc-700 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all"
+                                    placeholder="0.00"
+                                >
+                                <div class="absolute right-4 top-3.5 text-zinc-600 text-sm font-medium">EUR</div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="form-control w-full mt-2">
-                        <label class="label"><span class="label-text">Menge (Tokens)</span></label>
-                        <input type="number" v-model.number="newOrder.amount_token" class="input input-bordered w-full" placeholder="0" />
-                    </div>
-
-                    <div class="form-control w-full mt-2">
-                        <label class="label"><span class="label-text">Gesamtpreis (€)</span></label>
-                        <input type="number" v-model.number="newOrder.amount_cash" class="input input-bordered w-full" placeholder="0.00" />
-                    </div>
-
-                    <div class="divider"></div>
-                    
-                    <div class="text-xs text-center mb-4 opacity-70">
-                        <span v-if="newOrder.type === 'buy'">Reserviere <strong>{{ formatCurrency(newOrder.amount_cash || 0) }}</strong> im Treuhandkonto.</span>
-                        <span v-else>Reserviere <strong>{{ newOrder.amount_token || 0 }} Tokens</strong> im Treuhandkonto.</span>
-                    </div>
-
-                    <button class="btn btn-primary w-full" @click="createOrder" :disabled="loading || !isValidOrder">
-                        <span v-if="loading" class="loading loading-spinner"></span> Order Erstellen
+                    <button 
+                        @click="createOrder" 
+                        :disabled="loading || !isValidOrder"
+                        class="w-full mt-8 py-4 rounded-xl font-bold text-base transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                        :class="tradeMode === 'buy' 
+                            ? 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/20' 
+                            : 'bg-rose-500 hover:bg-rose-400 text-white shadow-rose-500/20'"
+                    >
+                        <span v-if="loading" class="animate-pulse">Processing...</span>
+                        <span v-else>{{ tradeMode === 'buy' ? 'Place Buy Order' : 'Place Sell Order' }}</span>
                     </button>
+
                 </div>
             </div>
 
-            <!-- Order List -->
-            <div class="lg:col-span-2 flex flex-col gap-6">
-                <transition name="fade">
-                    <div v-if="message.text" :class="`alert ${message.type === 'error' ? 'alert-error' : 'alert-success'} shadow-lg`">
-                        <component :is="message.type === 'error' ? AlertCircle : CheckCircle" class="w-6 h-6" />
-                        <span>{{ message.text }}</span>
-                    </div>
-                </transition>
 
-                <div class="card bg-base-100 shadow-xl">
-                    <div class="card-body p-0">
-                        <div class="p-4 border-b border-base-200 flex justify-between items-center">
-                            <h2 class="card-title gap-2"><List class="w-5 h-5"/> Orderbuch</h2>
-                            <button class="btn btn-sm btn-ghost" @click="fetchData"><RefreshCw class="w-4 h-4"/></button>
+            <div class="lg:col-span-8">
+                <div class="bg-zinc-900 rounded-2xl border border-zinc-800/50 shadow-xl overflow-hidden min-h-[500px] flex flex-col">
+                    
+                    <div class="px-6 py-4 border-b border-zinc-800 flex justify-between items-center">
+                        <h2 class="font-bold text-zinc-100 flex items-center gap-2">
+                            <TrendingUp class="w-4 h-4 text-emerald-500" /> Market Activity
+                        </h2>
+                        <button @click="fetchData" class="p-2 hover:bg-zinc-800 rounded-full text-zinc-500 hover:text-white transition-colors">
+                            <RefreshCcw class="w-4 h-4" :class="{'animate-spin': loading}" />
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-12 px-6 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wide border-b border-zinc-800 bg-zinc-900/50">
+                        <div class="col-span-2">User</div>
+                        <div class="col-span-3 text-right">Volume</div>
+                        <div class="col-span-3 text-right">Price</div>
+                        <div class="col-span-4 text-right">Action</div>
+                    </div>
+
+                    <div class="flex-grow overflow-y-auto">
+                        
+                        <div v-if="orders.length === 0" class="h-64 flex flex-col items-center justify-center text-zinc-600">
+                            <div class="bg-zinc-800 p-4 rounded-full mb-3">
+                                <RefreshCcw class="w-6 h-6 opacity-50" />
+                            </div>
+                            <span class="text-sm">Market is currently empty.</span>
                         </div>
 
-                        <div class="overflow-x-auto">
-                            <table class="table table-zebra w-full">
-                                <thead>
-                                    <tr>
-                                        <th>Typ</th>
-                                        <th>Menge</th>
-                                        <th>Preis</th>
-                                        <th>User</th>
-                                        <th>Aktion</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-if="orders.length === 0">
-                                        <td colspan="5" class="text-center py-8 text-gray-500">Keine offenen Orders.</td>
-                                    </tr>
-                                    <tr v-for="order in orders" :key="order.order_id">
-                                        <td>
-                                            <div class="badge font-bold" :class="order.type === 'buy' ? 'badge-success' : 'badge-secondary'">
-                                                {{ order.type.toUpperCase() }}
-                                            </div>
-                                        </td>
-                                        <td class="font-mono font-bold">{{ order.amount_token }}</td>
-                                        <td class="font-mono">{{ formatCurrency(order.amount_cash) }}</td>
-                                        <td>
-                                            <!-- HIER IST DIE ÄNDERUNG: Name statt ID -->
-                                            <span class="text-xs" :class="{'font-bold': isMyOrder(order)}">
-                                                {{ isMyOrder(order) ? 'Du' : (userNames[order.user_id] || 'Lade...') }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <button v-if="isMyOrder(order)" class="btn btn-error btn-xs" @click="deleteOrder(order.order_id)">Löschen</button>
-                                            <button v-else class="btn btn-primary btn-xs" @click="acceptOrder(order)">
-                                                {{ order.type === 'buy' ? 'Verkaufen' : 'Kaufen' }}
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div v-for="order in orders" :key="order.order_id" 
+                             class="grid grid-cols-12 px-6 py-4 items-center border-b border-zinc-800/50 hover:bg-zinc-800/40 transition-colors group">
+                            
+                            <div class="col-span-2 flex items-center gap-2">
+                                <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold"
+                                     :class="isMyOrder(order) ? 'bg-emerald-500 text-black' : 'bg-zinc-700 text-zinc-300'">
+                                     {{ (isMyOrder(order) ? 'ME' : (userNames[order.user_id]?.[0] || '?')).toUpperCase() }}
+                                </div>
+                                <span class="text-sm font-medium truncate" :class="isMyOrder(order) ? 'text-emerald-400' : 'text-zinc-300'">
+                                    {{ isMyOrder(order) ? 'You' : (userNames[order.user_id] || 'Loading...') }}
+                                </span>
+                            </div>
+
+                            <div class="col-span-3 text-right font-medium text-white">
+                                {{ order.amount_token }} <span class="text-zinc-600 text-xs">CT</span>
+                            </div>
+
+                            <div class="col-span-3 text-right font-medium text-white">
+                                {{ formatCurrency(order.amount_cash) }}
+                            </div>
+
+                            <div class="col-span-4 flex justify-end">
+                                <button v-if="isMyOrder(order)" @click="deleteOrder(order.order_id)" 
+                                        class="p-2 rounded-lg text-zinc-500 hover:text-rose-500 hover:bg-rose-500/10 transition-colors" title="Cancel Order">
+                                    <X class="w-4 h-4" />
+                                </button>
+
+                                <button v-else @click="acceptOrder(order)" 
+                                        class="px-5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all transform active:scale-95 shadow-lg"
+                                        :class="order.type === 'buy' 
+                                            ? 'bg-rose-500 text-white hover:bg-rose-600 shadow-rose-900/20' 
+                                            : 'bg-emerald-500 text-black hover:bg-emerald-400 shadow-emerald-900/20'">
+                                    {{ order.type === 'buy' ? 'Sell' : 'Buy' }}
+                                </button>
+                            </div>
+
+                            <div v-if="isMyOrder(order)" class="col-span-12 mt-1">
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 uppercase tracking-wider">
+                                    Your {{ order.type }} Order
+                                </span>
+                            </div>
+
                         </div>
                     </div>
+
                 </div>
             </div>
+
         </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.fade-enter-active, .fade-leave-active {
-    transition: opacity 0.5s ease;
-}
-.fade-enter-from, .fade-leave-to {
-    opacity: 0;
-}
-</style>
