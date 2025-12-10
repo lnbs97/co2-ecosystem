@@ -1,11 +1,12 @@
 <template>
-  <div class="min-h-screen bg-base-200">
-    <!-- Komponente kann direkt verwendet werden, da sie im Setup-Block importiert wurde -->
-    <AppHeader /> 
+  <div class="min-h-screen bg-slate-950 font-sans text-slate-200">
     
-    <main class="container mx-auto p-4">
+    <AppHeader class="fixed top-0 left-0 w-full z-50" /> 
+    
+    <main class="w-full">
       <router-view />
     </main>
+    
   </div>
 </template>
 
@@ -16,5 +17,10 @@ import AppHeader from './components/AppHeader.vue';
 </script>
 
 <style>
-/* ... */
+/* Globaler Reset, falls nötig */
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: #020617; /* slate-950 safety fallback */
+}
 </style>

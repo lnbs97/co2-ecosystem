@@ -1,21 +1,32 @@
 <template>
-  <div class="navbar bg-base-100 shadow-xl">
+  <div class="navbar fixed top-0 left-0 right-0 z-50 bg-slate-950/80 backdrop-blur-md border-b border-slate-800 h-16">
+    
     <div class="flex-1">
-      <router-link to="/" class="btn btn-ghost text-xl">CO2 Hub</router-link> 
+      <router-link to="/" class="btn btn-ghost hover:bg-transparent text-xl font-mono font-bold tracking-widest text-slate-100 hover:text-emerald-500 transition-colors">
+        <span class="text-emerald-600 mr-2">EU::</span>CO2_HUB
+      </router-link> 
     </div>
+
     <div class="flex-none">
 
-      <ul v-if="isLoggedIn" class="menu menu-horizontal px-1">
+      <ul v-if="isLoggedIn" class="menu menu-horizontal px-1 items-center gap-4">
+        <li v-if="userName" class="hidden md:block text-xs font-mono text-slate-400 uppercase tracking-wider mr-2">
+          USER: <span class="text-emerald-500">{{ userName }}</span>
+        </li>
+
         <li>
-          <button @click="handleLogout" class="btn btn-outline btn-error">
-            Ausloggen
+          <button @click="handleLogout" class="rounded-none border border-red-900/50 bg-red-900/10 text-red-500 hover:bg-red-600 hover:text-white hover:border-red-500 text-xs font-mono uppercase tracking-widest px-6 py-2 transition-all duration-300">
+            [ LOGOUT ]
           </button>
         </li>
       </ul>
 
       <ul v-else class="menu menu-horizontal px-1">
-        <!-- <li><router-link to="/login" class="btn btn-neutral">Login</router-link></li> --> 
-        <li><router-link to="/register" class="btn btn-primary">Registrieren</router-link></li>
+        <li>
+          <router-link to="/register" class="rounded-none border border-emerald-500/50 bg-emerald-900/10 text-emerald-500 hover:bg-emerald-500 hover:text-slate-950 text-xs font-mono uppercase tracking-widest px-6 py-2 transition-all duration-300">
+            INITIATE_REGISTRATION
+          </router-link>
+        </li>
       </ul>
 
     </div>
