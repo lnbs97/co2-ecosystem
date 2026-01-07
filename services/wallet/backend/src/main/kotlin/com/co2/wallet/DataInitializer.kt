@@ -9,12 +9,9 @@ class DataInitializer(private val walletService: WalletService) : CommandLineRun
 
     override fun run(vararg args: String?) {
         listOf(
-            CreateWalletRequest("person_a_uuid", 100.0, 500.0),
-            CreateWalletRequest("person_b_uuid", 100.0, 500.0),
-            CreateWalletRequest("shop_a_uuid", 10000.0, 100000.0),
-            CreateWalletRequest("shop_b_uuid", 10000.0, 100000.0),
             CreateWalletRequest("exchange", 0.0, 0.0),
-            CreateWalletRequest("shop-eco-fashion", 0.0, 0.0)
+            CreateWalletRequest("shop-eco-fashion", 0.0, 0.0),
+            CreateWalletRequest("shop-eco-flights", 0.0, 0.0),
         ).forEach { request ->
             try {
                 walletService.createWallet(request)

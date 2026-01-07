@@ -167,6 +167,27 @@ services:
       # 4. Leiten Sie die Anfrage an den internen Port 80 des Containers weiter
       - "traefik.http.services.shop-ui.loadbalancer.server.port=80"
 
+  shop-carbon-flights-ui:
+    container_name: shop-carbon-flights-ui
+    build: ../services/shop_carbon_flights/frontend
+    networks:
+      - co2-network
+    labels:
+      - "traefik.enable=true"
+      # 1. Define the route: Access this shop via /flights
+      - "traefik.http.routers.shop-flights-ui.rule=PathPrefix(`/flights`)"
+      - "traefik.http.routers.shop-flights-ui.entrypoints=web"
+
+      # 2. Middleware: Strip the /flights prefix so Nginx serves files from its root (/)
+      - "traefik.http.middlewares.shop-flights-strip.stripprefix.prefixes=/flights"
+
+      # 3. Apply the middleware to the router
+      - "traefik.http.routers.shop-flights-ui.middlewares=shop-flights-strip"
+
+      # 4. Route to the internal Nginx port (80)
+      - "traefik.http.services.shop-flights-ui.loadbalancer.server.port=80"
+
+
   # --- INFRASTRUKTUR ---
 
   rabbitmq:
