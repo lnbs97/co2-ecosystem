@@ -8,36 +8,36 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-# --- KONFIGURATION ---
+# --- CONFIGURATION ---
 EXCHANGE_ACCOUNT_ID = "exchange"
 
-# WICHTIG: Wir nutzen direkt den Container-Namen 'wallet-backend'.
-# Das funktioniert innerhalb des Docker-Netzwerks sehr zuverlässig.
+# IMPORTANT: We use the container name 'wallet-backend' directly.
+# This works very reliably within the Docker network.
 WALLET_SERVICE_URL = "http://wallet-backend:8080/api/wallet"
 
 print(f"--- STARTUP CONFIG ---")
 print(f"Exchange Service startet auf Port 8080.")
 print(f"Verbinde zu Wallet API: {WALLET_SERVICE_URL}")
 print(f"----------------------")
-sys.stdout.flush() # Erzwingt sofortige Ausgabe im Docker Log
+sys.stdout.flush() # Forces immediate output in the Docker log
 
-# --- DATENHALTUNG BÖRSE ---
+# --- EXCHANGE DATA STORAGE ---
 orders_db = []
 
-# --- HELPER: KOMMUNIKATION MIT WALLET API ---
+# --- HELPER: COMMUNICATION WITH WALLET API ---
 
 def get_auth_header(user_id):
-    """Erstellt den Header für die Wallet API Calls"""
-    # Der Wallet-Service erwartet die User-ID im Header 'X-User-ID'
+    """Creates the header for the Wallet API calls"""
+    # The Wallet Service expects the User ID in the header 'X-User-ID'
     return {'X-User-ID': user_id}
 
 def wallet_get_balance(user_id):
-    """Ruft das Guthaben vom echten Wallet-Service ab."""
+    """Retrieves the balance from the real Wallet Service."""
     try:
         url = f"{WALLET_SERVICE_URL}/balance"
         headers = get_auth_header(user_id)
         
-        # Timeout verhindert, dass der Service ewig hängt, wenn Wallet down ist
+        # Timeout prevents the service from hanging forever if Wallet is down
         response = requests.get(url, headers=headers, timeout=5)
         
         if response.status_code == 200:
@@ -54,10 +54,10 @@ def wallet_get_balance(user_id):
         return {"eur": 0.0, "tokens": 0.0}
 
 def wallet_transfer(from_id, to_id, amount_eur, amount_token, description="Trade"):
-    """Führt eine Transaktion im Wallet-Service durch."""
+    """Executes a transaction in the Wallet Service."""
     try:
         url = f"{WALLET_SERVICE_URL}/transfer-combined"
-        headers = get_auth_header(from_id) # Wichtig: Der Sender muss im Header stehen
+        headers = get_auth_header(from_id) # Important: The sender must be in the header
         
         payload = {
             "toUserId": to_id,
@@ -79,44 +79,44 @@ def wallet_transfer(from_id, to_id, amount_eur, amount_token, description="Trade
         print(f"[Internal Error] Transfer Request failed: {e}")
         return False
 
-# --- HILFSFUNKTIONEN ---
+# --- HELPER FUNCTIONS ---
 def get_user_id_from_header():
     """
-    Liest die User-ID aus den Headern.
-    Unterstützt sowohl 'X-User-ID' als auch 'Authorization: Bearer <ID>'.
+    Reads the User ID from the headers.
+    Supports both 'X-User-ID' and 'Authorization: Bearer <ID>'.
     """
-    # 1. Priorität: Direkter Header (wird oft von Proxies oder internen Services genutzt)
+    # 1. Priority: Direct header (often used by proxies or internal services)
     user_id = request.headers.get('X-User-ID')
     if user_id:
         return user_id
 
-    # 2. Priorität: Authorization Header (Standard für Frontends)
+    # 2. Priority: Authorization Header (Standard for frontends)
     auth_header = request.headers.get('Authorization')
     if auth_header and ' ' in auth_header:
-        # Schneidet "Bearer " ab und nimmt den Rest
+        # Cuts off "Bearer " and takes the rest
         return auth_header.split(' ')[1]
     
     return "anonym"
 
 # ==================================================================
-# API ENDPUNKTE
+# API ENDPOINTS
 # ==================================================================
 
-# 1. Guthaben anzeigen
+# 1. Show balance
 @app.route('/api/exchange-service/balance', methods=['GET'])
 def get_my_balance():
     user_id = get_user_id_from_header()
     balance = wallet_get_balance(user_id)
     return jsonify(balance), 200
 
-# 2. Alle Orders abrufen
+# 2. Get all orders
 @app.route('/api/exchange-service/orders', methods=['GET'])
 def get_orders():
-    # Zeige nur offene Orders an
+    # Show only open orders
     active_orders = [o for o in orders_db if o['status'] == 'open']
     return jsonify(active_orders), 200
 
-# 3. ORDER ERSTELLEN
+# 3. CREATE ORDER
 @app.route('/api/exchange-service/orders', methods=['POST'])
 def create_order():
     try:
@@ -125,14 +125,14 @@ def create_order():
 
         amount_token = float(data.get('amount_token', 0))
         amount_cash = float(data.get('amount_cash', 0.0))
-        order_type = data.get('type') # 'buy' oder 'sell'
+        order_type = data.get('type') # 'buy' or 'sell'
 
         if amount_token <= 0 or amount_cash <= 0:
-            return jsonify({"error": "Werte müssen positiv sein"}), 400
+            return jsonify({"error": "Values must be positive"}), 400
 
-        # --- LOGIK: Vorkasse an Treuhandkonto ---
+        # --- LOGIC: Prepayment to escrow account ---
         
-        # A) KAUFEN: User sendet GELD an Treuhand
+        # A) BUY: User sends MONEY to escrow
         if order_type == 'buy':
             success = wallet_transfer(
                 from_id=user_id, 
@@ -142,9 +142,9 @@ def create_order():
                 description=f"Order Deposit (Buy) {user_id}"
             )
             if not success:
-                return jsonify({"error": "Transfer fehlgeschlagen (Nicht genug EUR)!"}), 400
+                return jsonify({"error": "Transfer failed (Not enough EUR)!"}), 400
         
-        # B) VERKAUFEN: User sendet TOKENS an Treuhand
+        # B) SELL: User sends TOKENS to escrow
         elif order_type == 'sell':
             success = wallet_transfer(
                 from_id=user_id, 
@@ -154,9 +154,9 @@ def create_order():
                 description=f"Order Deposit (Sell) {user_id}"
             )
             if not success:
-                return jsonify({"error": "Transfer fehlgeschlagen (Nicht genug Tokens)!"}), 400
+                return jsonify({"error": "Transfer failed (Not enough tokens)!"}), 400
 
-        # C) Order speichern
+        # C) Save order
         new_order = {
             "order_id": str(uuid.uuid4()),
             "user_id": user_id,
@@ -172,68 +172,68 @@ def create_order():
 
     except Exception as e:
         print(f"Error creating order: {e}")
-        return jsonify({"error": "Serverfehler"}), 500
+        return jsonify({"error": "Server error"}), 500
 
-# 4. ORDER LÖSCHEN (Rückerstattung)
+# 4. DELETE ORDER (Refund)
 @app.route('/api/exchange-service/orders/<order_id>', methods=['DELETE'])
 def delete_order(order_id):
     user_id = get_user_id_from_header()
     order = next((o for o in orders_db if o['order_id'] == order_id), None)
-    
-    if not order: return jsonify({"error": "Order nicht gefunden"}), 404
-    if order['user_id'] != user_id: return jsonify({"error": "Das ist nicht deine Order"}), 403
-    if order['status'] != 'open': return jsonify({"error": "Order ist nicht mehr offen"}), 400
 
-    # --- RÜCKZAHLUNG ---
+    if not order: return jsonify({"error": "Order not found"}), 404
+    if order['user_id'] != user_id: return jsonify({"error": "This is not your order"}), 403
+    if order['status'] != 'open': return jsonify({"error": "Order is no longer open"}), 400
+
+    # --- REFUND ---
     success = False
     if order['type'] == 'buy':
-        # Geld zurück
+        # Money back
         success = wallet_transfer(EXCHANGE_ACCOUNT_ID, user_id, order['amount_cash'], 0.0, f"Refund {order_id}")
     elif order['type'] == 'sell':
-        # Tokens zurück
+        # Tokens back
         success = wallet_transfer(EXCHANGE_ACCOUNT_ID, user_id, 0.0, order['amount_token'], f"Refund {order_id}")
 
-    if not success: return jsonify({"error": "Rückerstattung fehlgeschlagen"}), 500
+    if not success: return jsonify({"error": "Refund failed"}), 500
 
     order['status'] = 'deleted'
-    return jsonify({"message": "Order gelöscht und Guthaben erstattet"}), 200
+    return jsonify({"message": "Order deleted and funds refunded"}), 200
 
-# 5. ORDER ANNEHMEN (Trade Execution)
+# 5. ACCEPT ORDER (Trade Execution)
 @app.route('/api/exchange-service/orders/<order_id>/accept', methods=['POST'])
 def accept_order(order_id):
     taker_id = get_user_id_from_header()
     order = next((o for o in orders_db if o['order_id'] == order_id), None)
-    
-    if not order or order['status'] != 'open': return jsonify({"error": "Order nicht verfügbar"}), 404
-    maker_id = order['user_id']
-    if taker_id == maker_id: return jsonify({"error": "Du kannst nicht deine eigene Order annehmen"}), 400
 
-    # --- TRADE LOGIK ---
+    if not order or order['status'] != 'open': return jsonify({"error": "Order not available"}), 404
+    maker_id = order['user_id']
+    if taker_id == maker_id: return jsonify({"error": "You cannot accept your own order"}), 400
+
+    # --- TRADE LOGIC ---
     if order['type'] == 'buy':
-        # Maker will Kaufen (Geld ist schon bei Treuhand)
-        # Taker muss Tokens an Treuhand senden
+        # Maker wants to buy (Money is already in escrow)
+        # Taker must send tokens to escrow
         if not wallet_transfer(taker_id, EXCHANGE_ACCOUNT_ID, 0.0, order['amount_token'], "Trade: Taker Deposit"):
-             return jsonify({"error": "Du hast nicht genug Tokens!"}), 400
+             return jsonify({"error": "You don't have enough tokens!"}), 400
         
-        # Swap: Geld an Taker, Tokens an Maker
+        # Swap: Money to Taker, Tokens to Maker
         wallet_transfer(EXCHANGE_ACCOUNT_ID, taker_id, order['amount_cash'], 0.0, "Trade: Cash to Taker")
         wallet_transfer(EXCHANGE_ACCOUNT_ID, maker_id, 0.0, order['amount_token'], "Trade: Tokens to Maker")
 
     elif order['type'] == 'sell':
-        # Maker will Verkaufen (Tokens sind schon bei Treuhand)
-        # Taker muss Geld an Treuhand senden
+        # Maker wants to sell (Tokens are already in escrow)
+        # Taker must send money to escrow
         if not wallet_transfer(taker_id, EXCHANGE_ACCOUNT_ID, order['amount_cash'], 0.0, "Trade: Taker Deposit"):
-             return jsonify({"error": "Du hast nicht genug Geld!"}), 400
+             return jsonify({"error": "You don't have enough money!"}), 400
 
-        # Swap: Tokens an Taker, Geld an Maker
+        # Swap: Tokens to Taker, Money to Maker
         wallet_transfer(EXCHANGE_ACCOUNT_ID, taker_id, 0.0, order['amount_token'], "Trade: Tokens to Taker")
         wallet_transfer(EXCHANGE_ACCOUNT_ID, maker_id, order['amount_cash'], 0.0, "Trade: Cash to Maker")
 
     order['status'] = 'closed'
     order['filled_by'] = taker_id
-    
-    return jsonify({"message": "Trade erfolgreich ausgeführt!", "order": order}), 200
+
+    return jsonify({"message": "Trade successfully executed!", "order": order}), 200
 
 if __name__ == '__main__':
-    # Wichtig: 0.0.0.0 für Docker Erreichbarkeit
+    # Important: 0.0.0.0 for Docker accessibility
     app.run(host='0.0.0.0', port=8080, debug=True)
