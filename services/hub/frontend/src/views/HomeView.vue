@@ -136,7 +136,7 @@
                <div class="h-10 w-10 text-purple-500 mb-4 group-hover:scale-110 transition-transform">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
                </div>
-               <h3 class="text-xl font-bold text-slate-200 group-hover:text-purple-400">Cart Sim.</h3>
+               <h3 class="text-xl font-bold text-slate-200 group-hover:text-purple-400">EcoFashion</h3>
                <p class="text-sm text-slate-500 mt-2">Check consumer goods for CO2 impact.</p>
                <div class="mt-4 flex items-center text-xs font-mono text-slate-600 group-hover:text-purple-500">
                   {{ isLoggedIn ? '> START SHOP' : '> LOGIN REQUIRED' }}
