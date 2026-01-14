@@ -4,8 +4,8 @@ import { toast } from 'sonner';
 import { Header } from '@/components/Header';
 import { FlightCard } from '@/components/FlightCard';
 import { BookingModal } from '@/components/BookingModal';
-import { demoFlights, AIRLINE_USER_ID, type Flight } from '@/data/flights';
-import {getStoredUserId, walletApi} from '@/lib/api';
+import { demoFlights, type Flight } from '@/data/flights';
+import {flightApi, getStoredUserId, walletApi} from '@/lib/api'; // flightApi importieren
 
 const Index = () => {
   const [eurBalance, setEurBalance] = useState(500);
@@ -47,12 +47,7 @@ const Index = () => {
     setIsBooking(true);
     try {
       const userId = getStoredUserId();
-      await walletApi.transferCombined(userId, {
-        toUserId: AIRLINE_USER_ID,
-        co2Amount: selectedFlight.priceCo2,
-        moneyAmount: selectedFlight.priceEur,
-        description: `Flight booking: ${selectedFlight.flightNumber} - ${selectedFlight.departure.code} to ${selectedFlight.arrival.code}`,
-      });
+      await flightApi.bookFlight(userId, selectedFlight);
 
       // Update local balance
       setEurBalance((prev) => prev - selectedFlight.priceEur);
