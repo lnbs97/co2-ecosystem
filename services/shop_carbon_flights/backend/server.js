@@ -1,22 +1,24 @@
 const express = require('express');
 const amqp = require('amqplib');
-const fetch = require('node-fetch'); // oder axios
+const fetch = require('node-fetch');
+const crypto = require('crypto'); // Hinzugefügt für UUID
 const app = express();
 
 app.use(express.json());
 
 const RABBIT_URL = 'amqp://guest:guest@rabbitmq:5672';
-const WALLET_URL = 'http://wallet-backend:8080/api/wallet'; // Interne Docker-URL
+const WALLET_URL = 'http://wallet-backend:8080/api/wallet';
 
-async function publishEvent(eventData) {
+// Helper für RabbitMQ
+async function publishEvent(eventData, routingKey) {
     try {
         const connection = await amqp.connect(RABBIT_URL);
         const channel = await connection.createChannel();
         const exchange = 'co2_events';
 
-        await channel.assertExchange(exchange, 'topic', { durable: false });
+        await channel.assertExchange(exchange, 'topic', { durable: true });
 
-        const routingKey = 'flight.booked';
+        // WICHTIG: Das Objekt als JSON String senden
         channel.publish(exchange, routingKey, Buffer.from(JSON.stringify(eventData)));
 
         console.log(`[x] Sent '${routingKey}':`, eventData);
@@ -51,21 +53,25 @@ app.post('/api/flights/book', async (req, res) => {
             throw new Error('Payment failed');
         }
 
-        // 2. Event nach erfolgreicher Zahlung senden
-        const event = {
-            eventType: 'flightBooked',
-            flightId: flight.id,
-            userId: userId,
-            timestamp: new Date().toISOString(),
-            details: {
+        // 2. Event erstellen (Passend zur Kotlin SystemEvent Klasse)
+        const systemEvent = {
+            eventId: crypto.randomUUID(),     // UUID generieren
+            source: 'flight-service',         // Name dieses Services
+            type: 'FLIGHT_BOOKED',            // Event Typ (Enum-Style String)
+            timestamp: new Date().toISOString(), // Instant.now() kompatibler String
+            data: {                           // Map<String, Any> Payload
+                flightId: flight.id,
+                userId: userId,
                 from: flight.departure.code,
                 to: flight.arrival.code,
                 priceEur: flight.priceEur,
-                priceCo2: flight.priceCo2
+                priceCo2: flight.priceCo2,
+                flightNumber: flight.flightNumber
             }
         };
 
-        await publishEvent(event);
+        // 3. Event senden
+        await publishEvent(systemEvent, 'flight.booked');
 
         res.json({ success: true, message: 'Flight booked and event published' });
 
