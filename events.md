@@ -113,3 +113,45 @@ Diese Events stammen aus dem zentralen `wallet-service`.
     "description": "Offset for Flight"
   }
   ```
+
+
+## 4. Exchange Service Events
+
+Der `exchange-service` publiziert Events, wenn ein Handel (Trade) zwischen zwei Bürgern erfolgreich abgeschlossen wurde.
+
+### 📈 Event: `TRADE_EXECUTED`
+
+Dieses Event wird gefeuert, sobald eine Order (Kauf oder Verkauf) gematcht wurde und die entsprechenden Vermögenswerte (Tokens und Euro) erfolgreich transferiert wurden.
+
+* **Producer:** `exchange-service`
+* **Exchange:** `co2_events`
+* **Type:** `topic`
+* **Routing Key:** `exchange.trade_executed`
+* **Durable:** `true`
+
+#### Payload (`data` Objekt)
+
+| Feld | Typ | Beschreibung | Beispiel |
+| :--- | :--- | :--- | :--- |
+| `makerId` | String | ID des Nutzers, der die ursprüngliche Order erstellt hat. | `"user-123"` |
+| `takerId` | String | ID des Nutzers, der die Order angenommen hat. | `"user-456"` |
+| `amount` | Number | Die Menge der transferierten CO2-Tokens. | `15.5` |
+| `makerSide` | String | Gibt an, ob der Maker gekauft (`"buy"`) oder verkauft (`"sell"`) hat. | `"sell"` |
+| `timestamp` | String | Interner Zeitpunkt der Trade-Ausführung im ISO-8601 Format. | `"2026-03-11T12:00:00"` |
+
+#### JSON Beispiel (Vollständig)
+
+```json
+{
+  "eventId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "source": "exchange-service",
+  "type": "TRADE_EXECUTED",
+  "timestamp": "2026-03-11T12:00:00.000Z",
+  "data": {
+    "makerId": "citizen-a",
+    "takerId": "citizen-b",
+    "amount": 50.0,
+    "makerSide": "buy",
+    "timestamp": "2026-03-11T12:00:00.123456"
+  }
+}
