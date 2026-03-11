@@ -1,5 +1,20 @@
 const API_BASE_URL = 'http://localhost:8080/api/wallet';
 
+export const flightApi = {
+  bookFlight: async (userId: string, flight: any) => {
+    // Ruft den neuen Service auf, der via Traefik unter /api/flights erreichbar ist
+    const response = await fetch('/api/flights/book', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId, flight }),
+    });
+    if (!response.ok) throw new Error('Booking failed');
+    return response.json();
+  },
+};
+
 export function getStoredUserId(): string {
   const userId = localStorage.getItem("userId");
   if (!userId) {

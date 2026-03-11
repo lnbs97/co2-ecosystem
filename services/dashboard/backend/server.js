@@ -9,7 +9,6 @@ const cors = require('cors');
 const PORT = 8080;
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://rabbitmq';
 const EXCHANGE_NAME = 'co2_events';
-// URL zum User-Service (Hub) innerhalb des Docker-Netzwerks
 const HUB_HOST = 'hub-backend';
 const HUB_PORT = 8080;
 
@@ -24,27 +23,24 @@ const io = new Server(server, {
 });
 
 // --- User Name Resolution Helper ---
-// Cache, damit wir nicht für jedes Event den Hub fragen müssen
 const userCache = {};
 
 function resolveUser(userId) {
     if (!userId) return Promise.resolve('Unbekannt');
 
-    // 1. Bekannte System-Accounts direkt auflösen
-    if (userId === 'exchange') return Promise.resolve('Exchange)');
+    if (userId === 'exchange') return Promise.resolve('Exchange');
     if (userId === 'shop-eco-fashion') return Promise.resolve('Fashion Shop');
+    if (userId === 'shop-eco-flights') return Promise.resolve('Flight Shop');
 
-    // 2. Cache prüfen
     if (userCache[userId]) return Promise.resolve(userCache[userId]);
 
-    // 3. User-Service fragen
     return new Promise((resolve) => {
         const options = {
             hostname: HUB_HOST,
             port: HUB_PORT,
             path: `/api/user-service/users/${userId}`,
             method: 'GET',
-            timeout: 1000 // Schneller Failover, falls Hub down ist
+            timeout: 1000
         };
 
         const req = httpClient.request(options, (res) => {
@@ -59,9 +55,8 @@ function resolveUser(userId) {
                             resolve(user.vorname);
                             return;
                         }
-                    } catch (e) { /* ignore parse error */ }
+                    } catch (e) { /* ignore */ }
                 }
-                // Fallback: Die ersten Zeichen der ID anzeigen
                 resolve(`User ${userId.substring(0, 5)}...`);
             });
         });
@@ -80,6 +75,8 @@ async function startRabbitConsumer() {
 
         await channel.assertExchange(EXCHANGE_NAME, 'topic', { durable: true });
         const q = await channel.assertQueue('', { exclusive: true });
+
+        // Wir hören auf alles ('#')
         await channel.bindQueue(q.queue, EXCHANGE_NAME, '#');
 
         console.log(`[RABBIT] Connected! Waiting for events...`);
@@ -88,36 +85,46 @@ async function startRabbitConsumer() {
             if (msg.content) {
                 try {
                     const contentJSON = JSON.parse(msg.content.toString());
+
+                    // Struktur anpassen an SystemEvent (kotlin)
                     const data = contentJSON.data || {};
                     const type = contentJSON.type;
 
                     // --- NACHRICHT FORMATIEREN ---
                     let readableMessage = data.description || `Event ${type}`;
 
-                    // Je nach Typ die Namen auflösen und Text bauen
+                    // Case: Wallet Created
                     if (type === 'WALLET_CREATED') {
                         const name = await resolveUser(data.userId);
                         readableMessage = `Wallet created for ${name}`;
                     }
+                    // Case: CO2 Transfer
                     else if (type === 'CO2_TRANSFER') {
                         const from = await resolveUser(data.fromUserId);
                         const to = await resolveUser(data.toUserId);
                         readableMessage = `${from} sent ${data.amount} CO2 to ${to}`;
                     }
+                    // Case: Money Transfer
                     else if (type === 'MONEY_TRANSFER') {
                         const from = await resolveUser(data.fromUserId);
                         const to = await resolveUser(data.toUserId);
                         readableMessage = `${from} sent ${data.amount}€ to ${to}`;
                     }
+                    // --- NEU: FLIGHT BOOKED ---
+                    else if (type === 'FLIGHT_BOOKED') {
+                        const user = await resolveUser(data.userId);
+                        // Zugriff auf die Felder im 'data' Objekt des Events
+                        readableMessage = `${user} booked Flight ${data.flightNumber} (${data.from} → ${data.to})`;
+                    }
 
                     // Frontend Event bauen
                     const frontendEvent = {
-                        service: contentJSON.source,
+                        service: contentJSON.source, // z.B. "flight-service"
                         type: type,
                         timestamp: contentJSON.timestamp,
-                        message: readableMessage, // Hier ist jetzt der schöne Text
-                        amount: data.amount,
-                        details: data
+                        message: readableMessage,
+                        amount: data.amount || data.priceEur, // Fallback für Anzeige
+                        details: data // Das gesamte Data-Objekt mitsenden für Details-Ansicht
                     };
 
                     io.emit('dashboard_event', frontendEvent);

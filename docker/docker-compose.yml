@@ -196,9 +196,22 @@ services:
       # 4. Route to the internal Nginx port (80)
       - "traefik.http.services.shop-flights-ui.loadbalancer.server.port=80"
 
+  shop-carbon-flights-backend:
+    container_name: shop-carbon-flights-backend
+    build: ../services/shop_carbon_flights/backend # Pfad anpassen
+    networks:
+      - co2-network
+    depends_on:
+      - rabbitmq
+      - wallet-backend
+    labels:
+      - "traefik.enable=true"
+      # API Route definieren
+      - "traefik.http.routers.shop-flights-backend.rule=PathPrefix(`/api/flights`)"
+      - "traefik.http.routers.shop-flights-backend.entrypoints=web"
+      - "traefik.http.services.shop-flights-backend.loadbalancer.server.port=8080"
 
   # --- INFRASTRUKTUR ---
-
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq

@@ -1,9 +1,8 @@
-import {useEffect, useState, useRef} from 'react';
+import {useEffect, useState} from 'react';
 import io from 'socket.io-client';
-import {Activity, ShoppingBag, Wallet, UserPlus, Leaf, ArrowRightLeft} from 'lucide-react';
+// 1. NEU: 'Plane' Icon importieren
+import {Activity, ShoppingBag, Wallet, UserPlus, Leaf, ArrowRightLeft, Plane} from 'lucide-react';
 
-// Connects to the backend via Traefik.
-// Traefik strips '/api/dashboard', so the backend receives requests at root '/socket.io'
 const SOCKET_PATH = '/api/dashboard/socket.io';
 
 function App() {
@@ -11,7 +10,6 @@ function App() {
     const [connected, setConnected] = useState(false);
 
     useEffect(() => {
-        // Initialize Socket.IO connection
         const socket = io('/', {
             path: SOCKET_PATH,
             transports: ['websocket', 'polling'],
@@ -27,19 +25,22 @@ function App() {
             setConnected(false);
         });
 
-        // Listen for the custom event broadcasted by the backend
         socket.on('dashboard_event', (newEvent) => {
-            // Keep only the last 50 events to avoid memory issues in long-running demos
             setEvents((prev) => [newEvent, ...prev].slice(0, 50));
         });
 
         return () => socket.disconnect();
     }, []);
 
-    // Helper to style events based on their source/content
     const getEventStyle = (evt) => {
         const s = (evt.service || '').toLowerCase();
         const t = (evt.type || '').toLowerCase();
+
+        // 2. NEU: Style für Flight-Service hinzufügen
+        if (s.includes('flight')) return {
+            icon: <Plane/>,
+            color: 'border-cyan-500 bg-cyan-900/20 text-cyan-400'
+        };
 
         if (s.includes('wallet')) return {
             icon: <Wallet/>,
@@ -65,8 +66,14 @@ function App() {
         return {icon: <Activity/>, color: 'border-gray-500 bg-gray-800 text-gray-300'};
     };
 
+    // Helper für die Amount-Label Beschriftung
+    const getAmountLabel = (evt) => {
+        if (evt.type === 'FLIGHT_BOOKED') return 'Price';
+        return evt.amount < 0 ? 'Sent' : 'Received';
+    };
+
     return (
-        <div className="min-h-screen p-6 font-sans">
+        <div className="min-h-screen p-6 font-sans bg-gray-950"> {/* Habe bg-gray-950 für dunklen Background ergänzt */}
             <header
                 className="max-w-4xl mx-auto mb-8 flex items-center justify-between border-b border-gray-800 pb-4">
                 <div>
@@ -98,7 +105,7 @@ function App() {
                     return (
                         <div
                             key={idx}
-                            className={`flex items-start gap-4 p-4 rounded-lg border-l-4 shadow-lg animate-in ${style.color.split(' ')[0]} bg-gray-900`}
+                            className={`flex items-start gap-4 p-4 rounded-lg border-l-4 shadow-lg animate-in fade-in slide-in-from-top-2 ${style.color.split(' ')[0]} bg-gray-900`}
                         >
                             <div className={`p-2 rounded-full ${style.color}`}>
                                 {style.icon}
@@ -128,14 +135,15 @@ function App() {
                                     {evt.amount && (
                                         <span
                                             className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold bg-gray-800 text-gray-300 border border-gray-700">
-                      {evt.amount < 0 ? 'Sent' : 'Received'} {Math.abs(evt.amount)}
-                    </span>
+                                            {/* 3. NEU: Logik für Label angepasst */}
+                                            {getAmountLabel(evt)} {Math.abs(evt.amount)}
+                                        </span>
                                     )}
                                     {evt.type && (
                                         <span
                                             className="px-2 py-1 rounded text-xs font-mono bg-gray-800 text-gray-500 uppercase border border-gray-700">
-                       {evt.type}
-                     </span>
+                                            {evt.type}
+                                        </span>
                                     )}
                                 </div>
                             </div>
