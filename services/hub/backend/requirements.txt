@@ -1,3 +1,6 @@
 Flask
 Flask-Cors
 requests
+pika
+flask-socketio
+eventlet

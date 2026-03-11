@@ -83,6 +83,10 @@ function updateLoginState() {
 }
 
 function handleLogout() {
+  const currentUserId = localStorage.getItem('userId');
+  if (currentUserId) {
+      localStorage.removeItem(`onboarding_tasks_${currentUserId}`);
+  }
   localStorage.removeItem('userId');
   isLoggedIn.value = false; 
   userName.value = ''; 

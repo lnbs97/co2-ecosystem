@@ -67,6 +67,8 @@ services:
     build: ../services/exchange/backend 
     networks:
       - co2-network
+    depends_on:
+      - rabbitmq
     labels:
       - "traefik.enable=true"
       # Routet Anfragen an /api/exchange-service an diesen Container
@@ -100,12 +102,19 @@ services:
     build: ../services/hub/backend
     networks:
       - co2-network
+    depends_on:
+      - rabbitmq
     labels:
       - "traefik.enable=true"
       # Flask App erwartet /api/user-service, also leiten wir das genau so weiter
-      - "traefik.http.routers.hub-backend.rule=PathPrefix(`/api/user-service`)"
+      - "traefik.http.routers.hub-backend.rule=PathPrefix(`/api/user-service`) || PathPrefix(`/socket.io`)"
       - "traefik.http.routers.hub-backend.entrypoints=web"
       - "traefik.http.services.hub-backend.loadbalancer.server.port=8080"
+
+      # WICHTIG für WebSockets: Sticky Sessions (damit der Client beim Handshake beim selben Container bleibt)
+      # Auch wenn du nur 1 Container hast, ist das bei SocketIO oft sicherer.
+      - "traefik.http.services.hub-backend.loadbalancer.sticky.cookie=true"
+      - "traefik.http.services.hub-backend.loadbalancer.sticky.cookie.name=sticky"
 
   hub-ui:
     container_name: hub-ui

@@ -1,7 +1,12 @@
+import eventlet
+eventlet.monkey_patch()
+
 import uuid
 import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit
+import user_worker
 
 # ==============================================================================
 # KONFIGURATION & EXTERNE DIENSTE
@@ -26,6 +31,8 @@ app = Flask(__name__)
 # CORS (Cross-Origin Resource Sharing) aktivieren, damit das Frontend (z.B. auf Port 3000)
 # Anfragen an dieses Backend (Port 8080/5000) senden darf, ohne blockiert zu werden.
 CORS(app) 
+
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 # ==============================================================================
 # MOCK DATENBANK (In-Memory)
@@ -218,11 +225,53 @@ def get_user_by_id(user_id):
         # Nicht gefunden
         return jsonify({"error": "Nutzer nicht gefunden"}), 404
 
+# Dieser Endpunkt wird von deinem 'user_worker.py' aufgerufen
+@app.route('/api/user-service/users/<user_id>/tasks', methods=['POST'])
+def add_task(user_id):
+    data = request.json
+    task_id = data.get('taskId')
+    
+    user = next((u for u in user_database if u['userId'] == user_id), None)
+    if not user: return jsonify({"error": "User not found"}), 404
+        
+    if 'completed_tasks' not in user:
+        user['completed_tasks'] = []
+        
+    # Task speichern
+    if task_id not in user['completed_tasks']:
+        user['completed_tasks'].append(task_id)
+        
+        print(f"🚀 PUSH: Sende WebSocket Event für User {user_id} -> {task_id}")
+        
+        # ⭐️ WEBSOCKET EMIT
+        # Wir senden eine Nachricht 'task_update' an ALLE verbundenen Clients.
+        # Das Frontend prüft dann, ob die userId passt.
+        socketio.emit('task_update', {
+            'userId': user_id,
+            'taskId': task_id
+        })
+        
+        return jsonify({"status": "added", "tasks": user['completed_tasks']}), 200
+    
+    return jsonify({"status": "exists"}), 200
 
+@app.route('/api/user-service/users/<user_id>/tasks', methods=['GET'])
+def get_user_tasks(user_id):
+    # User suchen
+    user = next((u for u in user_database if u['userId'] == user_id), None)
+    
+    # Wenn User nicht existiert oder keine Tasks hat -> leere Liste
+    if not user: 
+        return jsonify({"completed_tasks": []}), 200
+    
+    # Liste zurückgeben
+    return jsonify({
+        "completed_tasks": user.get('completed_tasks', [])
+    }), 200
 # ==============================================================================
 # SERVER START
 # ==============================================================================
 if __name__ == '__main__':
     # Startet den Flask Development Server.
     # host='0.0.0.0' macht den Server im lokalen Netzwerk verfügbar.
-    app.run(host='0.0.0.0', port=8080, debug=True)
+    socketio.run(app, host='0.0.0.0', port=8080, debug=True)

@@ -13,5 +13,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the content of the local src directory to the working directory
 COPY . .
 
-# Specify the command to run on container start
-CMD [ "python", "./user_service.py" ]
+# ⭐️ NEU: Start-Skript ausführbar machen
+COPY start.sh .
+RUN chmod +x start.sh
+
+# Port freigeben
+EXPOSE 8080
+
+# ⭐️ NEU: Das Skript ausführen statt python direkt
+CMD ["./start.sh"]

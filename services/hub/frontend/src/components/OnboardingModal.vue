@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import axios from 'axios';
+import { io } from 'socket.io-client';
 
 const isOpen = ref(false);
 const userName = ref('');
@@ -10,6 +11,7 @@ const tasksState = ref({});
 // Achievement Logic
 const lastCompletedTask = ref(null); 
 const showAchievement = ref(false);
+let socket = null; 
 
 // --- 1. TASK DEFINITIONS (Generisch benannt nach Typ) ---
 
@@ -79,40 +81,82 @@ const progress = computed(() => {
     return { done, total, percent: total > 0 ? (done / total) * 100 : 0 };
 });
 
-const saveProgress = () => localStorage.setItem('onboarding_tasks', JSON.stringify(tasksState.value));
+const saveProgress = () => {
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+        localStorage.setItem(`onboarding_tasks_${userId}`, JSON.stringify(tasksState.value));
+    }
+};
 const loadProgress = () => {
-    const saved = localStorage.getItem('onboarding_tasks');
-    if (saved) tasksState.value = JSON.parse(saved);
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+        const saved = localStorage.getItem(`onboarding_tasks_${userId}`);
+        if (saved) {
+            tasksState.value = JSON.parse(saved);
+        } else {
+            // Wichtig: Wenn neuer User -> Resetten!
+            tasksState.value = {}; 
+        }
+    }
 };
 
 // --- 4. AUTOMATION & EVENTS ---
-const handleTaskCompletion = (taskId) => {
-    if (tasksState.value[taskId]) return;
-    tasksState.value[taskId] = true;
-    saveProgress();
-
-    const taskInfo = personaData.value.tasks.find(t => t.id === taskId);
-    if (taskInfo) triggerAchievement(taskInfo);
-};
-
-const triggerAchievement = (task) => {
-    lastCompletedTask.value = task;
-    showAchievement.value = true;
-    setTimeout(() => { showAchievement.value = false; }, 5000);
-};
-
 const handleGlobalEvents = (event) => {
-    if (event.type === 'task-completed') handleTaskCompletion(event.detail.taskId);
     if (event.type === 'toggle-onboarding-modal') {
         if (event.detail && event.detail.forceOpen) openModal();
         else isOpen.value ? closeModal() : openModal();
     }
 };
 
+// ⭐️ NEU: WebSocket Setup
+const setupWebSocket = () => {
+    const userId = localStorage.getItem('userId');
+    if (!userId) return;
+
+    // Verbindung zum User-Service aufbauen
+    // Falls du Traefik nutzt, hier die Public URL (z.B. localhost/api/user-service oder direkt Port 8080)
+    // Für Dev Umgebung direkt auf den Port:
+    socket = io("http://localhost:8080", {
+        transports: ["websocket"], // Erzwingt Websocket (schneller)
+    });
+
+    socket.on("connect", () => {
+        console.log("🟢 WebSocket Connected!");
+    });
+
+    // WIR HÖREN AUF DAS EVENT VOM BACKEND
+    socket.on("task_update", (data) => {
+        // Prüfen: Ist das Event für MICH?
+        if (data.userId === userId) {
+            console.log("🚀 WebSocket Event empfangen:", data.taskId);
+            
+            // Task abhaken
+            if (!tasksState.value[data.taskId]) {
+                tasksState.value[data.taskId] = true;
+                saveProgress();
+            }
+        }
+    });
+};
+
+const fetchInitialStatus = async () => {
+    const userId = localStorage.getItem('userId');
+    if (!userId) return;
+    try {
+        const res = await axios.get(`/api/user-service/users/${userId}/tasks`);
+        const serverTasks = res.data.completed_tasks || [];
+        serverTasks.forEach(taskId => {
+            if (!tasksState.value[taskId]) tasksState.value[taskId] = true;
+        });
+        saveProgress();
+    } catch (e) { console.warn(e); }
+};
+
 // --- 5. API & INIT ---
 const openModal = () => {
   fetchUserData(); // Lädt jetzt auch den Typ!
   loadProgress();
+  fetchInitialStatus();
   isOpen.value = true;
 };
 const closeModal = () => isOpen.value = false;
@@ -134,13 +178,15 @@ async function fetchUserData() {
 onMounted(() => {
   loadProgress();
   fetchUserData();
+  fetchInitialStatus();
+  setupWebSocket();
   window.addEventListener('toggle-onboarding-modal', handleGlobalEvents);
-  window.addEventListener('task-completed', handleGlobalEvents);
 });
 
 onUnmounted(() => {
+  if (socket) socket.disconnect();
+
   window.removeEventListener('toggle-onboarding-modal', handleGlobalEvents);
-  window.removeEventListener('task-completed', handleGlobalEvents);
 });
 </script>
 
@@ -230,7 +276,7 @@ onUnmounted(() => {
                       </div>
 
                       <div v-if="task.completed" class="absolute right-3 top-3 text-[10px] font-bold text-emerald-500 uppercase tracking-widest border border-emerald-500/30 px-1 py-0.5 rounded rotate-[-2deg]">
-                          VERIFIED
+                          Completed
                       </div>
                   </li>
                </ul>
