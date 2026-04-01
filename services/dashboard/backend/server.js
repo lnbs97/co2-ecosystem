@@ -92,6 +92,7 @@ async function startRabbitConsumer() {
 
                     // --- NACHRICHT FORMATIEREN ---
                     let readableMessage = data.description || `Event ${type}`;
+                    console.log(`[DASHBOARD] Processing Event: ${type} from ${contentJSON.source}`);
 
                     // Case: Wallet Created
                     if (type === 'WALLET_CREATED') {
@@ -115,6 +116,20 @@ async function startRabbitConsumer() {
                         const user = await resolveUser(data.userId);
                         // Zugriff auf die Felder im 'data' Objekt des Events
                         readableMessage = `${user} booked Flight ${data.flightNumber} (${data.from} → ${data.to})`;
+                    }
+                    // --- NEU: PRODUCT PURCHASED ---
+                    else if (type === 'PRODUCT_PURCHASED') {
+                        console.log(`[DASHBOARD] Handling PRODUCT_PURCHASED for user ${data.userId}`);
+                        const user = await resolveUser(data.userId);
+                        const itemCount = data.items ? data.items.length : 0;
+                        const firstItem = itemCount > 0 ? data.items[0].name : 'Products';
+                        
+                        if (itemCount > 1) {
+                            readableMessage = `${user} bought ${firstItem} and ${itemCount - 1} other items`;
+                        } else {
+                            readableMessage = `${user} bought ${firstItem}`;
+                        }
+                        console.log(`[DASHBOARD] Formatted message: ${readableMessage}`);
                     }
 
                     // Frontend Event bauen
