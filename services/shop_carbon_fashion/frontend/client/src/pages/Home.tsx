@@ -77,7 +77,8 @@ export default function Home() {
       toUserId: MERCHANT_ID,
       moneyAmount: totalEuro,
       co2Amount: totalCo2,
-      description: `Checkout ${cartItems.length} items from EcoFashion`
+      description: `Checkout ${cartItems.length} items from EcoFashion`,
+      items: cartItems
     }, {
       onSuccess: () => {
         setCartItems([]);

@@ -1,4 +1,3 @@
-# Stage 1: Build the React application
 FROM node:20-alpine AS build
 WORKDIR /app
 
@@ -12,20 +11,22 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Stage 2: Serve the application with Nginx
-FROM nginx:stable-alpine
-WORKDIR /usr/share/nginx/html
+# Stage 2: Run the application with Node.js
+FROM node:20-alpine
+WORKDIR /app
 
-# Remove default Nginx static assets
-RUN rm -rf ./*
+# Copy necessary files from build stage
+COPY --from=build /app/package*.json ./
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/server ./server
+COPY --from=build /app/shared ./shared
+COPY --from=build /app/node_modules ./node_modules
 
-# Copy built assets from the 'build' stage
-# WICHTIG: Fügen Sie '/*' am Ende des Quellpfades hinzu, um den *Inhalt*
-# des dist-Verzeichnisses zu kopieren, nicht das Verzeichnis selbst.
-COPY --from=build /app/dist/* .
+# Expose the port from app.ts (defaults to 5000)
+EXPOSE 5000
 
-# Copy the custom Nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Set production environment
+ENV NODE_ENV=production
 
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Start the Node.js server
+CMD ["npm", "start"]

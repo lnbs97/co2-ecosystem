@@ -4,6 +4,7 @@ export const MERCHANT_ID = "shop-eco-fashion";
 
 // Helper to get user ID from local storage
 export function getStoredUserId(): string {
+  if (typeof window === "undefined") return "";
   const userId = localStorage.getItem("userId");
   if (!userId) {
     console.warn("Keine 'userId' im localStorage gefunden. Transaktionen könnten fehlschlagen.");
@@ -23,6 +24,7 @@ export interface CombinedTransferRequest {
   co2Amount: number;
   moneyAmount: number;
   description: string;
+  items?: any[];
 }
 
 export interface TransactionEvent {
@@ -50,31 +52,28 @@ async function getBalance(userId: string): Promise<BalanceResponse> {
   return res.json();
 }
 
-async function transferCombined(data: CombinedTransferRequest): Promise<TransactionEvent[]> {
+async function transferCombined(data: CombinedTransferRequest): Promise<any> {
   const userId = getStoredUserId();
   if (!userId) throw new Error("User ID not found in storage");
 
-  const res = await fetch("/api/wallet/transfer-combined", {
+  // Route through the fashion shop backend to emit events
+  const res = await fetch("/api/fashion/checkout", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-User-ID": userId,
     },
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      ...data,
+      userId
+    }),
   });
 
   if (!res.ok) {
     let errorMessage = "Transfer failed";
     try {
-      // Versuche, eine JSON-Fehlermeldung zu parsen (z.B. {"message": "Nicht genug CO2 Token"})
       const errorData = await res.json();
-      if (errorData && typeof errorData === 'object') {
-        errorMessage = errorData.message || errorData.error || JSON.stringify(errorData);
-      } else {
-        errorMessage = String(errorData);
-      }
+      errorMessage = errorData.message || errorData.error || JSON.stringify(errorData);
     } catch (e) {
-      // Fallback auf reinen Text, falls kein JSON zurückkommt
       const text = await res.text();
       if (text) errorMessage = text;
     }

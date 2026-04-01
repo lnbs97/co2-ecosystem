@@ -155,3 +155,52 @@ Dieses Event wird gefeuert, sobald eine Order (Kauf oder Verkauf) gematcht wurde
     "timestamp": "2026-03-11T12:00:00.123456"
   }
 }
+
+---
+
+## 5. Fashion Shop Events
+
+Der `fashion-shop` publiziert Events, wenn Produkte (Kleidung) gekauft werden.
+
+### 👕 Event: `PRODUCT_PURCHASED`
+
+Wird gesendet, nachdem der Warenkorb erfolgreich über den Wallet-Service bezahlt wurde.
+
+* **Producer:** `fashion-shop`
+* **Exchange:** `co2_events`
+* **Type:** `topic`
+* **Routing Key:** `fashion.purchased`
+* **Durable:** `true`
+
+#### Payload (`data` Objekt)
+
+| Feld | Typ | Beschreibung | Beispiel |
+| :--- | :--- | :--- | :--- |
+| `userId` | String | ID des Käufers. | `"user-123"` |
+| `merchantId` | String | ID des Shops. | `"shop-eco-fashion"` |
+| `priceEur` | Number | Gesamtpreis in Euro. | `89.99` |
+| `priceCo2` | Number | Gesamte CO2-Kosten in kg. | `12.5` |
+| `items` | Array | Liste der gekauften Produkte. | `[...]` |
+| `description` | String | Zusammenfassung des Kaufs. | `"Checkout 2 items from EcoFashion"` |
+
+#### JSON Beispiel (Vollständig)
+
+```json
+{
+  "eventId": "b2c3d4e5-f6a7-8901-2345-6789abcdef01",
+  "source": "fashion-shop",
+  "type": "PRODUCT_PURCHASED",
+  "timestamp": "2026-04-01T13:30:00.000Z",
+  "data": {
+    "userId": "user-123",
+    "merchantId": "shop-eco-fashion",
+    "priceEur": 120.50,
+    "priceCo2": 15.2,
+    "items": [
+      { "id": "p1", "name": "Eco Shirt", "quantity": 2, "euroPrice": 30.25 },
+      { "id": "p2", "name": "Recycled Jeans", "quantity": 1, "euroPrice": 60.00 }
+    ],
+    "description": "Checkout 3 items from EcoFashion"
+  }
+}
+```
