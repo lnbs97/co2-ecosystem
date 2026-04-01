@@ -1,0 +1,14 @@
+{
+  "name": "shop-carbon-trains-backend",
+  "version": "1.0.0",
+  "description": "Backend for Train Shop handling bookings and events",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.3",
+    "express": "^4.18.2",
+    "node-fetch": "^2.6.9"
+  }
+}

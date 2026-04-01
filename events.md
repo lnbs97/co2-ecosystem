@@ -155,6 +155,7 @@ Dieses Event wird gefeuert, sobald eine Order (Kauf oder Verkauf) gematcht wurde
     "timestamp": "2026-03-11T12:00:00.123456"
   }
 }
+```
 
 ---
 
@@ -201,6 +202,54 @@ Wird gesendet, nachdem der Warenkorb erfolgreich über den Wallet-Service bezahl
       { "id": "p2", "name": "Recycled Jeans", "quantity": 1, "euroPrice": 60.00 }
     ],
     "description": "Checkout 3 items from EcoFashion"
+  }
+}
+```
+
+---
+
+## 6. Train Shop Events
+
+Der `train-service` publiziert Events, wenn Zugreisen gebucht werden.
+
+### 🚆 Event: `TRAIN_BOOKED`
+
+Wird gesendet, nachdem eine Zugreise erfolgreich über den Wallet-Service bezahlt wurde.
+
+* **Producer:** `train-service`
+* **Exchange:** `co2_events`
+* **Type:** `topic`
+* **Routing Key:** `train.booked`
+* **Durable:** `true`
+
+#### Payload (`data` Objekt)
+
+| Feld | Typ | Beschreibung | Beispiel |
+| :--- | :--- | :--- | :--- |
+| `trainId` | Number | Interne ID des Zuges. | `1` |
+| `userId` | String | ID des Buchenden. | `"user-456"` |
+| `from` | String | Abfahrtsort. | `"Berlin"` |
+| `to` | String | Zielort. | `"Paris"` |
+| `priceEur` | Number | Ticketpreis in Euro. | `89.0` |
+| `priceCo2` | Number | CO2-Emissionen in kg. | `12.0` |
+| `trainNumber` | String | Zugnummer/Name. | `"ICE 9568"` |
+
+#### JSON Beispiel (Vollständig)
+
+```json
+{
+  "eventId": "c3d4e5f6-a7b8-9012-3456-7890abcdef01",
+  "source": "train-service",
+  "type": "TRAIN_BOOKED",
+  "timestamp": "2026-04-01T14:30:00.000Z",
+  "data": {
+    "trainId": 1,
+    "userId": "user-456",
+    "from": "Berlin",
+    "to": "Paris",
+    "priceEur": 89.0,
+    "priceCo2": 12.0,
+    "trainNumber": "ICE 9568"
   }
 }
 ```

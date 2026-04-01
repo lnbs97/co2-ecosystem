@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react';
 import io from 'socket.io-client';
 // 1. NEU: 'Plane' Icon importieren
-import {Activity, ShoppingBag, Wallet, UserPlus, Leaf, ArrowRightLeft, Plane} from 'lucide-react';
+import {Activity, ShoppingBag, Wallet, UserPlus, Leaf, ArrowRightLeft, Plane, Train} from 'lucide-react';
 
 const SOCKET_PATH = '/api/dashboard/socket.io';
 
@@ -40,6 +40,10 @@ function App() {
         if (s.includes('flight')) return {
             icon: <Plane/>,
             color: 'border-cyan-500 bg-cyan-900/20 text-cyan-400'
+        };
+        if (s.includes('train')) return {
+            icon: <Train/>,
+            color: 'border-emerald-500 bg-emerald-900/20 text-emerald-400'
         };
 
         if (s.includes('wallet')) return {
