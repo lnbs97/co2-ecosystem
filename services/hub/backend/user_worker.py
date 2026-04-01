@@ -63,23 +63,91 @@ def process_trade_event(data):
         elif u_type == 'arm' and taker_action == 'sell':
             complete_task(taker_id, 'poor_sell')
 
+def process_flight_event(data):
+    """
+    GRUNDGERÜST FÜR FLUG-LOGIK
+    Hier kommt später die Prüfung (z.B. Zielort JFK) rein.
+    """
+    print(f" [✈️] Verarbeite Flug-Event: {data}")
+
+    user_id = data.get('userId') #
+    destination = data.get('to') #
+    
+    # Deine gewünschten Destinationen
+    allowed_destinations = ['LHR', 'CDG', 'AMS', 'VIE']
+
+    print(f" [✈️] Prüfe Flug-Regel für User={user_id} nach {destination}...")
+
+    # 1. User-Profil vom User-Service abrufen
+    user_info = get_user_data(user_id) #
+    if not user_info:
+        print(f" [!] User {user_id} nicht gefunden. Abbruch.")
+        return
+
+    user_type = user_info.get('userType') #
+
+    # 2. Bedingung: User muss 'reich' sein und das Ziel muss in der Liste sein
+    # Der Task-ID 'rich_flight' stammt aus deinem OnboardingModal
+    if user_type == 'reich' and destination in allowed_destinations:
+        complete_task(user_id, 'rich_flight') #
+    else:
+        print(f" [i] Flug für User {user_id} (Typ: {user_type}) nach {destination} triggert keinen Task.")
+
+def process_shop_event(data):
+    """
+    BUSINESS LOGIC für den Shop-Task.
+    Prüft, was gekauft wurde und ob der User-Typ dazu passt.
+    """
+    user_id = data.get('userId')
+    
+    # ⚠️ HIER BRAUCHEN WIR DIE EXAKTEN NAMEN AUS DER SHOP-DOKU
+    item_id = data.get('itemId') # oder 'product', 'itemName' etc.
+
+    print(f" [🛍️] Prüfe Shop-Regel für User={user_id}, gekauftes Item={item_id}...")
+
+    # User-Profil abrufen, um reich/arm zu prüfen
+    user_info = get_user_data(user_id)
+    if not user_info:
+        print(f" [!] User {user_id} nicht gefunden. Abbruch.")
+        return
+
+    user_type = user_info.get('userType')
+
+    # Task-Logik: 
+    # - "Arm" kauft Fahrrad
+    # - "Reich" kauft Blazer
+    # ⚠️ Die Strings 'bike', 'blazer' und die Task-IDs müssen exakt zum Frontend passen!
+    if user_type == 'arm' and item_id == 'bike':
+        complete_task(user_id, 'poor_bike')
+        print(f" [✅] Task 'poor_bike' für {user_id} erledigt!")
+        
+    elif user_type == 'reich' and item_id == 'blazer':
+        complete_task(user_id, 'rich_blazer')
+        print(f" [✅] Task 'rich_blazer' für {user_id} erledigt!")
+        
+    else:
+        print(f" [i] Kauf von '{item_id}' durch User-Typ '{user_type}' triggert keinen Task.")
+
 def listen_to_system_events():
     connection = None
     while True:
         try:
             connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST, heartbeat=600))
             channel = connection.channel()
-            channel.exchange_declare(exchange=EXCHANGE_NAME, exchange_type='topic')
+            channel.exchange_declare(exchange=EXCHANGE_NAME, exchange_type='topic', durable=True)
 
             # Wir hören jetzt auf ALLES (oder spezifisch auf trade_executed)
             queue_name = channel.queue_declare(queue='', exclusive=True).method.queue
             channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name, routing_key="exchange.#")
+            channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name, routing_key="flight.#")
+            channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name, routing_key="shop.#")
 
             print(f" [*] Worker gestartet. Warte auf Events...", flush=True)
 
             def callback(ch, method, properties, body):
                 try:
                     msg = json.loads(body)
+                    print(f"DEBUG: Empfange Routing-Key: {method.routing_key} | Typ: {msg.get('type')}")
                     event_type = msg.get('type')
                     data = msg.get('data')
                     
@@ -87,6 +155,12 @@ def listen_to_system_events():
 
                     if event_type == 'TRADE_EXECUTED':
                         process_trade_event(data)
+                    
+                    elif event_type == 'FLIGHT_BOOKED': # NEU: Der Einstiegspunkt für deinen 2. Task
+                        process_flight_event(data)
+                    
+                    elif event_type == 'ITEM_PURCHASED':
+                        process_shop_event(data)
                         
                     # Hier könnte man auch auf 'WALLET_UPDATE' o.ä. hören
                     
