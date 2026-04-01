@@ -35,11 +35,11 @@ def get_rabbitmq_channel():
     try:
         rabbitmq_connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST, heartbeat=600))
         rabbitmq_channel = rabbitmq_connection.channel()
-        rabbitmq_channel.exchange_declare(exchange=EXCHANGE_NAME, exchange_type='topic')
+        rabbitmq_channel.exchange_declare(exchange=EXCHANGE_NAME, exchange_type='topic', durable=True)
         return rabbitmq_channel
     except Exception as e:
         print(f"[RabbitMQ Error] {e}")
-        return None
+        return None 
 
 def publish_trade_event(maker_id, taker_id, amount_token, maker_side):
     """
