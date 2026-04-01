@@ -96,37 +96,44 @@ def process_flight_event(data):
 def process_shop_event(data):
     """
     BUSINESS LOGIC für den Shop-Task.
-    Prüft, was gekauft wurde und ob der User-Typ dazu passt.
+    Prüft, ob die Ziel-ID in der Liste der gekauften Items enthalten ist.
     """
     user_id = data.get('userId')
-    
-    # ⚠️ HIER BRAUCHEN WIR DIE EXAKTEN NAMEN AUS DER SHOP-DOKU
-    item_id = data.get('itemId') # oder 'product', 'itemName' etc.
+    # Das Event schickt jetzt eine Liste 'items'
+    purchased_items = data.get('items', []) 
 
-    print(f" [🛍️] Prüfe Shop-Regel für User={user_id}, gekauftes Item={item_id}...")
+    print(f" [🛍️] Prüfe Shop-Regel für User={user_id}...")
+    print(f" [DEBUG] Gekaufte Items: {purchased_items}")
 
-    # User-Profil abrufen, um reich/arm zu prüfen
+    # User-Profil abrufen
     user_info = get_user_data(user_id)
     if not user_info:
-        print(f" [!] User {user_id} nicht gefunden. Abbruch.")
         return
 
     user_type = user_info.get('userType')
 
-    # Task-Logik: 
-    # - "Arm" kauft Fahrrad
-    # - "Reich" kauft Blazer
-    # ⚠️ Die Strings 'bike', 'blazer' und die Task-IDs müssen exakt zum Frontend passen!
-    if user_type == 'arm' and item_id == 'bike':
-        complete_task(user_id, 'poor_bike')
-        print(f" [✅] Task 'poor_bike' für {user_id} erledigt!")
+    # Wir extrahieren alle IDs aus der Liste der gekauften Items.
+    # Da 'items' Objekte sind (wie in deinem Frontend), greifen wir auf item['id'] zu.
+    # Wir wandeln alles in Strings um, um sicherzugehen.
+    try:
+        item_ids = [str(item.get('id')) for item in purchased_items if isinstance(item, dict)]
+    except Exception as e:
+        print(f" [!] Fehler beim Extrahieren der Item-IDs: {e}")
+        return
+
+    print(f" [DEBUG] Gefundene IDs im Warenkorb: {item_ids}")
+
+    # Prüfung der Tasks
+    if user_type == 'arm' and '1' in item_ids:
+        print(f" [✅] Match gefunden: Arme Person hat 'Essential Black T-Shirt' (ID 1) gekauft.")
+        complete_task(user_id, 'poor_jacket')
         
-    elif user_type == 'reich' and item_id == 'blazer':
-        complete_task(user_id, 'rich_blazer')
-        print(f" [✅] Task 'rich_blazer' für {user_id} erledigt!")
+    elif user_type == 'reich' and '8' in item_ids:
+        print(f" [✅] Match gefunden: Reiche Person hat 'Navy Blue Blazer' (ID 8) gekauft.")
+        complete_task(user_id, 'rich_suit')
         
     else:
-        print(f" [i] Kauf von '{item_id}' durch User-Typ '{user_type}' triggert keinen Task.")
+        print(f" [i] Keine Task-relevanten Items für Typ '{user_type}' gefunden.")
 
 def listen_to_system_events():
     connection = None
@@ -140,7 +147,7 @@ def listen_to_system_events():
             queue_name = channel.queue_declare(queue='', exclusive=True).method.queue
             channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name, routing_key="exchange.#")
             channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name, routing_key="flight.#")
-            channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name, routing_key="shop.#")
+            channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name, routing_key="fashion.#")
 
             print(f" [*] Worker gestartet. Warte auf Events...", flush=True)
 
@@ -159,7 +166,7 @@ def listen_to_system_events():
                     elif event_type == 'FLIGHT_BOOKED': # NEU: Der Einstiegspunkt für deinen 2. Task
                         process_flight_event(data)
                     
-                    elif event_type == 'ITEM_PURCHASED':
+                    elif event_type == 'PRODUCT_PURCHASED':
                         process_shop_event(data)
                         
                     # Hier könnte man auch auf 'WALLET_UPDATE' o.ä. hören
