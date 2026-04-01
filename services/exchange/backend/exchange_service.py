@@ -114,6 +114,42 @@ def get_my_balance(): return jsonify(wallet_get_balance(get_user_id_from_header(
 @app.route('/api/exchange-service/orders', methods=['GET'])
 def get_orders(): return jsonify([o for o in orders_db if o['status'] == 'open']), 200
 
+def publish_order_event(user_id, order_type, amount_token, amount_cash):
+    """
+    Sendet ein Event: ORDER_CREATED.
+    """
+    global rabbitmq_connection, rabbitmq_channel
+    try:
+        channel = get_rabbitmq_channel()
+        if not channel: return
+
+        data_payload = {
+            "userId": user_id,
+            "type": order_type,
+            "amount_token": amount_token,
+            "amount_cash": amount_cash,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+        event = {
+            "eventId": str(uuid.uuid4()),
+            "source": "exchange-service",
+            "type": "ORDER_CREATED",
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "data": data_payload
+        }
+
+        channel.basic_publish(
+            exchange=EXCHANGE_NAME,
+            routing_key="exchange.order_created",
+            body=json.dumps(event)
+        )
+        print(f"[RabbitMQ] ORDER_CREATED gesendet")
+        sys.stdout.flush()
+    except Exception as e:
+        print(f"[RabbitMQ Error Order Event] {e}")
+        sys.stdout.flush()
+
 @app.route('/api/exchange-service/orders', methods=['POST'])
 def create_order():
     try:
@@ -129,6 +165,10 @@ def create_order():
 
         order = { "order_id": str(uuid.uuid4()), "user_id": uid, "type": typ, "amount_token": amt_tok, "amount_cash": amt_cash, "status": "open", "created_at": datetime.now().strftime("%Y-%m-%d") }
         orders_db.append(order)
+        
+        # --- EVENT SENDEN ---
+        publish_order_event(uid, typ, amt_tok, amt_cash)
+        
         return jsonify(order), 201
     except: return jsonify({"error": "Error"}), 500
 
@@ -144,13 +184,20 @@ def delete_order(order_id):
 
 @app.route('/api/exchange-service/orders/<order_id>/accept', methods=['POST'])
 def accept_order(order_id):
+    print(f"[EXCHANGE] Accepting order {order_id}...")
+    sys.stdout.flush()
     taker_id = get_user_id_from_header()
     o = next((x for x in orders_db if x['order_id'] == order_id), None)
-    if not o or o['status'] != 'open': return jsonify({"error": "N/A"}), 404
+    if not o or o['status'] != 'open': 
+        print(f"[EXCHANGE] Order {order_id} not found or not open")
+        sys.stdout.flush()
+        return jsonify({"error": "N/A"}), 404
     maker_id = o['user_id']
     if taker_id == maker_id: return jsonify({"error": "Self-trade"}), 400
 
     amt_tok = o['amount_token']; amt_cash = o['amount_cash']; maker_type = o['type']
+    print(f"[EXCHANGE] Trade between {maker_id} and {taker_id}: {amt_tok} CO2 for {amt_cash} EUR")
+    sys.stdout.flush()
 
     # --- NUR NOCH GELD TRANSFERIEREN ---
     if maker_type == 'buy':
@@ -163,10 +210,27 @@ def accept_order(order_id):
         wallet_transfer(EXCHANGE_ACCOUNT_ID, maker_id, amt_cash, 0.0, "Cash->Maker")
 
     # --- NUR EIN EVENT SENDEN ---
-    publish_trade_event(maker_id, taker_id, amt_tok, maker_type)
+    try:
+        print(f"[EXCHANGE] Calling publish_trade_event...")
+        sys.stdout.flush()
+        publish_trade_event(maker_id, taker_id, amt_tok, maker_type)
+        print(f"[EXCHANGE] publish_trade_event call finished")
+        sys.stdout.flush()
+    except Exception as e:
+        print(f"[EXCHANGE] Critical Error during event publishing: {e}")
+        sys.stdout.flush()
 
     o['status'] = 'closed'; o['filled_by'] = taker_id
+    print(f"[EXCHANGE] Order {order_id} successfully closed")
+    sys.stdout.flush()
     return jsonify({"message": "Done", "order": o}), 200
+
+@app.route('/api/exchange-service/test-event', methods=['POST'])
+def test_event():
+    print("[EXCHANGE] Manual test event requested")
+    sys.stdout.flush()
+    publish_trade_event("test-maker", "test-taker", 1.0, "buy")
+    return jsonify({"message": "Test event sent"}), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=True)

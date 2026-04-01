@@ -86,6 +86,11 @@ async function startRabbitConsumer() {
                 try {
                     const contentJSON = JSON.parse(msg.content.toString());
 
+                    // --- FILTER: Wallet-Service Events ausblenden ---
+                    if (contentJSON.source === 'wallet-service') {
+                        return;
+                    }
+
                     // Struktur anpassen an SystemEvent (kotlin)
                     const data = contentJSON.data || {};
                     const type = contentJSON.type;
@@ -130,6 +135,21 @@ async function startRabbitConsumer() {
                             readableMessage = `${user} bought ${firstItem}`;
                         }
                         console.log(`[DASHBOARD] Formatted message: ${readableMessage}`);
+                    }
+                    // --- NEU: TRADE EXECUTED ---
+                    else if (type === 'TRADE_EXECUTED') {
+                        const maker = await resolveUser(data.makerId);
+                        const taker = await resolveUser(data.takerId);
+                        const verb = data.makerSide === 'buy' ? 'bought' : 'sold';
+                        const preposition = data.makerSide === 'buy' ? 'from' : 'to';
+                        
+                        readableMessage = `${maker} ${verb} ${data.amount} CO2 ${preposition} ${taker}`;
+                    }
+                    // --- NEU: ORDER CREATED ---
+                    else if (type === 'ORDER_CREATED') {
+                        const user = await resolveUser(data.userId);
+                        const verb = data.type === 'buy' ? 'wants to buy' : 'wants to sell';
+                        readableMessage = `${user} ${verb} ${data.amount_token} CO2 for ${data.amount_cash} €`;
                     }
 
                     // Frontend Event bauen

@@ -20,9 +20,8 @@ WALLET_SERVICE_URL = "http://wallet-backend:8080/api/wallet/wallets"
 # Diese UUIDs werden in öffentlichen Listen (z.B. Überweisungs-Dropdowns) ausgeblendet.
 # "exchange" ist der feste Account für die Börse/Bank.
 BOERSE_UUID = "exchange" 
-SHOP_UUID = "shop-eco-fashion"
-FLIGHT_SHOP_UUID = "shop-eco-flights"
-USER_BLACKLIST = [BOERSE_UUID, SHOP_UUID, FLIGHT_SHOP_UUID]
+ShOP_UUID = "shop-eco-fashion"
+USER_BLACKLIST = [BOERSE_UUID]
 
 # ==============================================================================
 # APP SETUP
@@ -40,23 +39,7 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 # ==============================================================================
 # Da wir keine echte SQL-Datenbank haben, speichern wir User hier in einer Liste.
 # Achtung: Beim Neustart des Servers gehen diese Daten verloren!
-user_database = [
-    {
-        "userId": "shop-eco-flights",
-        "vorname": "EU Flight Authority",
-        "userType": "system"
-    },
-    {
-        "userId": "exchange",
-        "vorname": "Carbon Exchange",
-        "userType": "system"
-    },
-    {
-        "userId": "shop-eco-fashion",
-        "vorname": "Eco Fashion Shop",
-        "userType": "system"
-    }
-]
+user_database = []
 
 # Zähler, um abwechselnd "reiche" und "arme" User zu generieren.
 user_counter = 0
@@ -164,12 +147,12 @@ def register_user():
         
         if is_rich:
             user_type = 'reich'
-            initial_money = 10000.0  # Viel Geld, wenig CO2-Rechte
-            initial_co2 = 10000.0       
+            initial_money = 1000.0  # Viel Geld, wenig CO2-Rechte
+            initial_co2 = 5.0       
         else:
             user_type = 'arm'
-            initial_money = 10000.0    # Wenig Geld, viele CO2-Rechte
-            initial_co2 = 10000.0     
+            initial_money = 50.0    # Wenig Geld, viele CO2-Rechte
+            initial_co2 = 100.0     
         
         user_counter += 1
 

@@ -173,15 +173,17 @@ services:
       - WALLET_URL=http://wallet-backend:8080/api/wallet
     labels:
       - "traefik.enable=true"
+      # UI Router
+      - "traefik.http.routers.shop-ui.rule=PathPrefix(`/shop`)"
       - "traefik.http.routers.shop-ui.entrypoints=web"
-      # Route both UI and API to this container
-      - "traefik.http.routers.shop-ui.rule=PathPrefix(`/shop`) || PathPrefix(`/api/fashion`)"
-      
-      # Middleware to strip /shop prefix for UI
       - "traefik.http.middlewares.shop-ui-stripprefix.stripprefix.prefixes=/shop"
       - "traefik.http.routers.shop-ui.middlewares=shop-ui-stripprefix"
       
-      # Point to the Node.js server port
+      # API Router (No stripping needed as backend expects /api/fashion)
+      - "traefik.http.routers.shop-api.rule=PathPrefix(`/api/fashion`)"
+      - "traefik.http.routers.shop-api.entrypoints=web"
+      
+      # Point both to the Node.js server port
       - "traefik.http.services.shop-ui.loadbalancer.server.port=5000"
 
   shop-carbon-flights-ui:
