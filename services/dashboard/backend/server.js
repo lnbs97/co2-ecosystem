@@ -86,12 +86,18 @@ async function startRabbitConsumer() {
                 try {
                     const contentJSON = JSON.parse(msg.content.toString());
 
+                    // --- FILTER: Wallet-Service Events ausblenden ---
+                    if (contentJSON.source === 'wallet-service') {
+                        return;
+                    }
+
                     // Struktur anpassen an SystemEvent (kotlin)
                     const data = contentJSON.data || {};
                     const type = contentJSON.type;
 
                     // --- NACHRICHT FORMATIEREN ---
                     let readableMessage = data.description || `Event ${type}`;
+                    console.log(`[DASHBOARD] Processing Event: ${type} from ${contentJSON.source}`);
 
                     // Case: Wallet Created
                     if (type === 'WALLET_CREATED') {
@@ -115,6 +121,35 @@ async function startRabbitConsumer() {
                         const user = await resolveUser(data.userId);
                         // Zugriff auf die Felder im 'data' Objekt des Events
                         readableMessage = `${user} booked Flight ${data.flightNumber} (${data.from} → ${data.to})`;
+                    }
+                    // --- NEU: PRODUCT PURCHASED ---
+                    else if (type === 'PRODUCT_PURCHASED') {
+                        console.log(`[DASHBOARD] Handling PRODUCT_PURCHASED for user ${data.userId}`);
+                        const user = await resolveUser(data.userId);
+                        const itemCount = data.items ? data.items.length : 0;
+                        const firstItem = itemCount > 0 ? data.items[0].name : 'Products';
+                        
+                        if (itemCount > 1) {
+                            readableMessage = `${user} bought ${firstItem} and ${itemCount - 1} other items`;
+                        } else {
+                            readableMessage = `${user} bought ${firstItem}`;
+                        }
+                        console.log(`[DASHBOARD] Formatted message: ${readableMessage}`);
+                    }
+                    // --- NEU: TRADE EXECUTED ---
+                    else if (type === 'TRADE_EXECUTED') {
+                        const maker = await resolveUser(data.makerId);
+                        const taker = await resolveUser(data.takerId);
+                        const verb = data.makerSide === 'buy' ? 'bought' : 'sold';
+                        const preposition = data.makerSide === 'buy' ? 'from' : 'to';
+                        
+                        readableMessage = `${maker} ${verb} ${data.amount} CO2 ${preposition} ${taker}`;
+                    }
+                    // --- NEU: ORDER CREATED ---
+                    else if (type === 'ORDER_CREATED') {
+                        const user = await resolveUser(data.userId);
+                        const verb = data.type === 'buy' ? 'wants to buy' : 'wants to sell';
+                        readableMessage = `${user} ${verb} ${data.amount_token} CO2 for ${data.amount_cash} €`;
                     }
 
                     // Frontend Event bauen
