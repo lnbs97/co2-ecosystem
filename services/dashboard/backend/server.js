@@ -144,6 +144,11 @@ async function startRabbitConsumer() {
                     // --- NEU: TRAIN BOOKED ---
                     else if (type === 'TRAIN_BOOKED') {
                         const user = await resolveUser(data.userId);
+                        readableMessage = `${user} booked Train ${data.trainNumber} to ${data.to}`;
+                    }
+                    // --- NEU: TRAIN BOOKED ---
+                    else if (type === 'TRAIN_BOOKED') {
+                        const user = await resolveUser(data.userId);
                         readableMessage = `${user} booked Train ${data.trainNumber} from ${data.from} to ${data.to}`;
                     }
                     // --- NEU: PRODUCT PURCHASED ---

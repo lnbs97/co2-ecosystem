@@ -135,6 +135,36 @@ def process_shop_event(data):
     else:
         print(f" [i] Keine Task-relevanten Items für Typ '{user_type}' gefunden.")
 
+def process_train_event(data):
+    """
+    LOGIK FÜR ZUG-BUCHUNGEN
+    Prüft, ob eine 'arme' Person eine nachhaltige Reise getätigt hat.
+    """
+    print(f" [🚄] Verarbeite Zug-Event: {data}", flush=True)
+
+    user_id = data.get('userId')
+    destination = data.get('to')
+    train_number = data.get('trainNumber')
+
+    print(f" [🚄] Prüfe Zug-Regel für User={user_id} nach {destination} ({train_number})...", flush=True)
+
+    # 1. User-Profil vom User-Service abrufen
+    user_info = get_user_data(user_id)
+    if not user_info:
+        print(f" [!] User {user_id} nicht gefunden. Abbruch.", flush=True)
+        return
+
+    user_type = user_info.get('userType')
+
+    # 2. Bedingung: User muss 'arm' sein.
+    # Jede Zugbuchung (egal wohin) zählt für die arme Persona als "Sustainable Mobility".
+    if user_type == 'arm':
+        # Wir nutzen die ID 'poor_bike', da diese in deiner Task-Liste steht
+        complete_task(user_id, 'poor_bike')
+        print(f" [✅] Task 'Sustainable Mobility' (ID: poor_bike) für {user_id} erledigt!", flush=True)
+    else:
+        print(f" [i] Zugfahrt für User {user_id} (Typ: {user_type}) triggert keinen Task (nur für Typ 'arm').", flush=True)
+
 def listen_to_system_events():
     connection = None
     while True:
@@ -148,6 +178,7 @@ def listen_to_system_events():
             channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name, routing_key="exchange.#")
             channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name, routing_key="flight.#")
             channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name, routing_key="fashion.#")
+            channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name, routing_key="train.#")
 
             print(f" [*] Worker gestartet. Warte auf Events...", flush=True)
 
@@ -168,6 +199,9 @@ def listen_to_system_events():
                     
                     elif event_type == 'PRODUCT_PURCHASED':
                         process_shop_event(data)
+                    
+                    elif event_type == 'TRAIN_BOOKED':
+                        process_train_event(data)
                         
                     # Hier könnte man auch auf 'WALLET_UPDATE' o.ä. hören
                     
