@@ -204,3 +204,42 @@ Wird gesendet, nachdem der Warenkorb erfolgreich über den Wallet-Service bezahl
   }
 }
 ```
+
+---
+
+## 6. Hub Service Events
+
+Der `hub-service` (User Service) publiziert Events, wenn Nutzer ihre Onboarding-Tasks abschließen.
+
+### ✅ Event: `TASK_COMPLETED`
+
+Wird gesendet, wenn ein einzelner Task (Protokoll) erfolgreich abgeschlossen wurde.
+
+* **Producer:** `hub-service`
+* **Exchange:** `co2_events`
+* **Type:** `topic`
+* **Routing Key:** `hub.task_completed`
+
+#### Payload (`data` Objekt)
+
+| Feld | Typ | Beschreibung | Beispiel |
+| :--- | :--- | :--- | :--- |
+| `userId` | String | ID des Nutzers. | `"user-123"` |
+| `taskId` | String | ID des abgeschlossenen Tasks. | `"rich_liq"` |
+
+---
+
+### 🌟 Event: `ALL_TASKS_COMPLETED`
+
+Wird gesendet, wenn ein Nutzer alle drei erforderlichen Onboarding-Tasks abgeschlossen hat.
+
+* **Producer:** `hub-service`
+* **Exchange:** `co2_events`
+* **Type:** `topic`
+* **Routing Key:** `hub.all_tasks_completed`
+
+#### Payload (`data` Objekt)
+
+| Feld | Typ | Beschreibung | Beispiel |
+| :--- | :--- | :--- | :--- |
+| `userId` | String | ID des Nutzers. | `"user-123"` |

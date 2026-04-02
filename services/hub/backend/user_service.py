@@ -3,6 +3,11 @@ eventlet.monkey_patch()
 
 import uuid
 import requests
+import pika
+import json
+import datetime
+import threading
+import time
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
@@ -15,6 +20,10 @@ import user_worker
 # URL zum Wallet-Backend (Kotlin/Spring Boot). 
 # Hierhin senden wir Requests, um Konten für neue User zu erstellen.
 WALLET_SERVICE_URL = "http://wallet-backend:8080/api/wallet/wallets"
+
+# RabbitMQ Konfiguration
+RABBITMQ_HOST = 'rabbitmq'
+EXCHANGE_NAME = 'co2_events'
 
 # 🚫 BLACKLIST KONFIGURATION
 # Diese UUIDs werden in öffentlichen Listen (z.B. Überweisungs-Dropdowns) ausgeblendet.
@@ -33,6 +42,41 @@ app = Flask(__name__)
 CORS(app) 
 
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+
+# ==============================================================================
+# EVENT PUBLISHING
+# ==============================================================================
+def _do_publish(event_type, data):
+    """Interne Funktion für den Thread-Aufruf"""
+    # Kurze Verzögerung um eventlet/socketio nicht zu blockieren
+    time.sleep(0.1)
+    try:
+        connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST, heartbeat=600))
+        channel = connection.channel()
+        channel.exchange_declare(exchange=EXCHANGE_NAME, exchange_type='topic', durable=True)
+        
+        event = {
+            "eventId": str(uuid.uuid4()),
+            "source": "hub-service",
+            "type": event_type,
+            "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "data": data
+        }
+        
+        routing_key = f"hub.{event_type.lower()}"
+        channel.basic_publish(
+            exchange=EXCHANGE_NAME,
+            routing_key=routing_key,
+            body=json.dumps(event)
+        )
+        connection.close()
+        print(f" [x] Published {event_type} to RabbitMQ via Thread")
+    except Exception as e:
+        print(f" [!] Error publishing event in thread: {e}")
+
+def publish_event(event_type, data):
+    """Sendet ein Event an den RabbitMQ Exchange co2_events via Hintergrund-Thread"""
+    threading.Thread(target=_do_publish, args=(event_type, data)).start()
 
 # ==============================================================================
 # MOCK DATENBANK (In-Memory)
@@ -250,6 +294,19 @@ def add_task(user_id):
             'userId': user_id,
             'taskId': task_id
         })
+
+        # ⭐️ RABBITMQ EVENT
+        # Wir informieren das gesamte System (z.B. das Dashboard)
+        publish_event('TASK_COMPLETED', {
+            'userId': user_id,
+            'taskId': task_id
+        })
+
+        # Prüfen ob alle 3 Tasks erledigt sind
+        if len(user['completed_tasks']) == 3:
+            publish_event('ALL_TASKS_COMPLETED', {
+                'userId': user_id
+            })
         
         return jsonify({"status": "added", "tasks": user['completed_tasks']}), 200
     

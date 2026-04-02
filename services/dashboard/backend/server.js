@@ -24,6 +24,14 @@ const io = new Server(server, {
 
 // --- User Name Resolution Helper ---
 const userCache = {};
+const taskNames = {
+    'rich_liq': 'Secure Carbon Liquidity',
+    'rich_flight': 'Book Business Flight',
+    'rich_suit': 'Update Wardrobe',
+    'poor_sell': 'Monetize Carbon Surplus',
+    'poor_bike': 'Acquire Mobility',
+    'poor_jacket': 'Winter Essentials'
+};
 
 function resolveUser(userId) {
     if (!userId) return Promise.resolve('Unbekannt');
@@ -93,14 +101,24 @@ async function startRabbitConsumer() {
 
                     // Struktur anpassen an SystemEvent (kotlin)
                     const data = contentJSON.data || {};
-                    const type = contentJSON.type;
+                    const rawType = contentJSON.type || '';
+                    const type = String(rawType).trim().toUpperCase();
 
                     // --- NACHRICHT FORMATIEREN ---
                     let readableMessage = data.description || `Event ${type}`;
                     console.log(`[DASHBOARD] Processing Event: ${type} from ${contentJSON.source}`);
 
+                    // --- HUB EVENTS (TASK PROGRESS) ---
+                    if (type === 'TASK_COMPLETED') {
+                        const user = await resolveUser(data.userId);
+                        const taskName = taskNames[data.taskId] || data.taskId || 'Unknown Task';
+                        readableMessage = `${user} completed task ${taskName}`;
+                    } else if (type === 'ALL_TASKS_COMPLETED') {
+                        const user = await resolveUser(data.userId);
+                        readableMessage = `🌟 ${user} has completed ALL tasks! 🌟`;
+                    }
                     // Case: Wallet Created
-                    if (type === 'WALLET_CREATED') {
+                    else if (type === 'WALLET_CREATED') {
                         const name = await resolveUser(data.userId);
                         readableMessage = `Wallet created for ${name}`;
                     }
