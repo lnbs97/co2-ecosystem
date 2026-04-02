@@ -18,15 +18,15 @@ let socket = null;
 // Hat viel Geld, aber wenig Tokens -> Muss Tokens kaufen
 const richTasks = [
     { id: 'rich_liq', title: "Secure Carbon Liquidity", desc: "Purchase Tokens in the Exchange Service" },
-    { id: 'rich_flight', title: "Book Business Flight", desc: "Book a flight via Travel Service to NYC." },
+    { id: 'rich_flight', title: "Book Business Flight", desc: "Book a flight via Travel Service." },
     { id: 'rich_suit', title: "Update Wardrobe", desc: "Buy a Navy Blue Blazer in the Shop." }
 ];
 
 // Hat wenig Geld, aber viele Tokens -> Muss Tokens verkaufen
 const poorTasks = [
     { id: 'poor_sell', title: "Monetize Carbon Surplus", desc: "Sell tokens on the Exchange to generate Cash." },
-    { id: 'poor_bike', title: "Acquire Mobility", desc: "Buy a City Bike in the Shop." },
-    { id: 'poor_jacket', title: "Winter Essentials", desc: "Buy a Jacket." }
+    { id: 'poor_bike', title: "SustainableMobility", desc: "Book a train ticket via Train Shop" },
+    { id: 'poor_jacket', title: "Basics Essentials", desc: "Buy the Essential Black T-Shirt in the Shop." }
 ];
 
 const defaultTasks = [
@@ -42,8 +42,8 @@ const personaData = computed(() => {
             role: 'HIGH INCOME / CONSUMER',
             // Werte angepasst an dein Python Backend (1000€ / 5 CO2)
             desc: 'Your consumption profile is classified as HIGH INTENSITY. Your initial carbon allowance is critically low. Use your financial capital to acquire necessary emission rights immediately.',
-            startCash: '1,000.00', 
-            startToken: '5.00',     
+            startCash: '24,500.00',
+            startToken: '850.00',     
             tasks: richTasks
         };
     } else if (userType.value === 'arm') {
@@ -51,8 +51,8 @@ const personaData = computed(() => {
             role: 'LOW INCOME / SAVER',
             // Werte angepasst an dein Python Backend (50€ / 100 CO2)
             desc: 'Your consumption profile is MINIMAL. You have been allocated a surplus of Carbon Tokens. Your liquidity is low; consider trading your surplus rights for currency.',
-            startCash: '50.00',     
-            startToken: '100.00',
+            startCash: '42.50',     
+            startToken: '310000.00',
             tasks: poorTasks
         };
     } else {
@@ -240,7 +240,7 @@ onUnmounted(() => {
                        </span>
                     </div>
                     <div>
-                       <span class="block text-xs text-slate-500 uppercase mb-1">Fiat Credit (€)</span>
+                       <span class="block text-xs text-slate-500 uppercase mb-1">Euro (€)</span>
                        <span class="text-xl font-bold text-blue-400">
                           € {{ personaData.startCash }}
                        </span>

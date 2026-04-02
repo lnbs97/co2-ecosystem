@@ -24,7 +24,7 @@ export const products: Product[] = [
     name: "Essential Black T-Shirt",
     brand: "Urban Basics",
     euroPrice: 29.99,
-    co2Price: 45,
+    co2Price: 7000, // 7kg
     image: blackTShirt,
     category: "Tops",
     sizes: ["XS", "S", "M", "L", "XL"],
@@ -34,7 +34,7 @@ export const products: Product[] = [
     name: "Classic Blue Denim",
     brand: "Denim Co",
     euroPrice: 89.99,
-    co2Price: 180,
+    co2Price: 25000, // 25kg
     image: blueJeans,
     category: "Bottoms",
     sizes: ["28", "30", "32", "34", "36"],
@@ -44,7 +44,7 @@ export const products: Product[] = [
     name: "Premium White Shirt",
     brand: "Formal Essentials",
     euroPrice: 59.99,
-    co2Price: 95,
+    co2Price: 12000, // 12kg
     image: whiteShirt,
     category: "Tops",
     sizes: ["S", "M", "L", "XL"],
@@ -54,7 +54,7 @@ export const products: Product[] = [
     name: "Cozy Wool Sweater",
     brand: "Winter Warmth",
     euroPrice: 79.99,
-    co2Price: 160,
+    co2Price: 35000, // 35kg
     image: graySweater,
     category: "Tops",
     sizes: ["XS", "S", "M", "L", "XL"],
@@ -64,7 +64,7 @@ export const products: Product[] = [
     name: "Classic Trench Coat",
     brand: "Timeless Fashion",
     euroPrice: 189.99,
-    co2Price: 420,
+    co2Price: 55000, // 55kg
     image: beigeTrench,
     category: "Outerwear",
     sizes: ["S", "M", "L"],
@@ -74,7 +74,7 @@ export const products: Product[] = [
     name: "Modern Black Sneakers",
     brand: "Street Style",
     euroPrice: 119.99,
-    co2Price: 240,
+    co2Price: 20000, // 20kg
     image: blackSneakers,
     category: "Shoes",
     sizes: ["38", "39", "40", "41", "42", "43"],
@@ -84,7 +84,7 @@ export const products: Product[] = [
     name: "Floral Summer Dress",
     brand: "Bloom Collection",
     euroPrice: 69.99,
-    co2Price: 125,
+    co2Price: 15000, // 15kg
     image: floralDress,
     category: "Dresses",
     sizes: ["XS", "S", "M", "L"],
@@ -94,7 +94,7 @@ export const products: Product[] = [
     name: "Navy Blue Blazer",
     brand: "Professional Line",
     euroPrice: 149.99,
-    co2Price: 310,
+    co2Price: 65000, // 65kg
     image: navyBlazer,
     category: "Outerwear",
     sizes: ["S", "M", "L", "XL"],

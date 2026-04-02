@@ -186,17 +186,17 @@ def register_user():
         user_id = str(uuid.uuid4())
 
         # Schritt 2: Spielmechanik "Reich vs. Arm"
-        # Wir nutzen Modulo (%), um bei jeder Registrierung abzuwechseln.
-        is_rich = user_counter % 2 == 1
+        # Wir nutzen Modulo (%), für ein Verhältnis von 1/3 brauche wir % 4
+        is_rich = user_counter % 5 == 0 
         
         if is_rich:
             user_type = 'reich'
-            initial_money = 1000.0  # Viel Geld, wenig CO2-Rechte
-            initial_co2 = 5.0       
+            initial_money = 24500.0  # Viel Geld, wenig CO2-Rechte
+            initial_co2 = 850.0       
         else:
             user_type = 'arm'
-            initial_money = 50.0    # Wenig Geld, viele CO2-Rechte
-            initial_co2 = 100.0     
+            initial_money = 42.50    # Wenig Geld, viele CO2-Rechte
+            initial_co2 = 310000.0     
         
         user_counter += 1
 

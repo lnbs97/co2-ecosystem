@@ -45,7 +45,7 @@ export const demoFlights: Flight[] = [
     },
     duration: '1h 45m',
     priceEur: 129,
-    priceCo2: 85,
+    priceCo2: 135000, // 135kg
     seatsAvailable: 24,
   },
   {
@@ -68,7 +68,7 @@ export const demoFlights: Flight[] = [
     },
     duration: '2h 30m',
     priceEur: 89,
-    priceCo2: 120,
+    priceCo2: 215000, // 215kg
     seatsAvailable: 12,
   },
   {
@@ -91,7 +91,7 @@ export const demoFlights: Flight[] = [
     },
     duration: '1h 15m',
     priceEur: 75,
-    priceCo2: 65,
+    priceCo2: 105000, // 105kg
     seatsAvailable: 8,
   },
   {
@@ -114,7 +114,7 @@ export const demoFlights: Flight[] = [
     },
     duration: '2h 15m',
     priceEur: 145,
-    priceCo2: 110,
+    priceCo2: 210000, // 210kg
     seatsAvailable: 31,
   },
   {
@@ -137,7 +137,7 @@ export const demoFlights: Flight[] = [
     },
     duration: '0h 55m',
     priceEur: 59,
-    priceCo2: 45,
+    priceCo2: 85000, // 85kg
     seatsAvailable: 5,
   },
   {
@@ -160,7 +160,7 @@ export const demoFlights: Flight[] = [
     },
     duration: '1h 40m',
     priceEur: 112,
-    priceCo2: 95,
+    priceCo2: 160000, // 160kg
     seatsAvailable: 18,
   },
 ];

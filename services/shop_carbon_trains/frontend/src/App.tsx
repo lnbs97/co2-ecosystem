@@ -10,10 +10,38 @@ interface Train {
 }
 
 const TRAINS: Train[] = [
-  { id: 1, from: 'Berlin', to: 'Paris', priceEur: 89, priceCo2: 12, trainNumber: 'ICE 9568' },
-  { id: 2, from: 'Munich', to: 'Vienna', priceEur: 45, priceCo2: 8, trainNumber: 'RJX 63' },
-  { id: 3, from: 'Hamburg', to: 'Copenhagen', priceEur: 59, priceCo2: 10, trainNumber: 'EC 33' },
-  { id: 4, from: 'Cologne', to: 'Brussels', priceEur: 35, priceCo2: 5, trainNumber: 'THA 9424' },
+  { 
+    id: 1, 
+    from: 'Düsseldorf', 
+    to: 'Paris', 
+    priceEur: 79, 
+    priceCo2: 17500, // ca. 500km -> 17,5kg CO2
+    trainNumber: 'EST 9424' // Eurostar
+  },
+  { 
+    id: 2, 
+    from: 'Düsseldorf', 
+    to: 'Vienna', 
+    priceEur: 129, 
+    priceCo2: 33250, // ca. 950km -> 33,25kg CO2
+    trainNumber: 'ICE 21' 
+  },
+  { 
+    id: 3, 
+    from: 'Düsseldorf', 
+    to: 'Copenhagen', 
+    priceEur: 109, 
+    priceCo2: 27300, // ca. 780km -> 27,3kg CO2
+    trainNumber: 'ICE 826' 
+  },
+  { 
+    id: 4, 
+    from: 'Düsseldorf', 
+    to: 'Brussels', 
+    priceEur: 45, 
+    priceCo2: 7000, // ca. 200km -> 7kg CO2
+    trainNumber: 'EST 9412' 
+  },
 ];
 
 function App() {
