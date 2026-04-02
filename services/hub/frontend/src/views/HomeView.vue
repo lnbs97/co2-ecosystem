@@ -191,10 +191,44 @@
                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                      </svg>
                   </div>
-               <h3 class="text-xl font-bold text-slate-200 group-hover:text-orange-400">Travel Service</h3>
+               <h3 class="text-xl font-bold text-slate-200 group-hover:text-orange-400">Flight Service</h3>
                   <p class="text-sm text-slate-500 mt-2">Book flights. High emission warnings.</p>
                   <div class="mt-4 flex items-center text-xs font-mono text-slate-600 group-hover:text-orange-500">
                      {{ isLoggedIn ? '> ACCESS TERMINAL' : '> LOGIN REQUIRED' }}
+                  </div>
+                </div>
+
+                <div @click="handleServiceClick('/trains')" 
+                     class="group relative border border-slate-800 bg-slate-900/50 p-6 cursor-pointer hover:border-emerald-500/50 transition-all hover:bg-slate-900">
+                  <div class="absolute top-0 right-0 p-2 opacity-50">
+                     <span class="text-[10px] font-mono border border-slate-700 px-1 text-slate-500">SYS-05</span>
+                  </div>
+                  <div class="h-10 w-10 text-emerald-500 mb-4 group-hover:scale-110 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h3 class="text-xl font-bold text-slate-200 group-hover:text-emerald-400">Train Shop</h3>
+                  <p class="text-sm text-slate-500 mt-2">Green travel options. Low emissions.</p>
+                  <div class="mt-4 flex items-center text-xs font-mono text-slate-600 group-hover:text-emerald-500">
+                     {{ isLoggedIn ? '> BOOK TRAIN' : '> LOGIN REQUIRED' }}
+                  </div>
+                </div>
+
+                <div @click="handleServiceClick('/dashboard')" 
+                     class="group relative border border-slate-800 bg-slate-900/50 p-6 cursor-pointer hover:border-red-500/50 transition-all hover:bg-slate-900">
+                  <div class="absolute top-0 right-0 p-2 opacity-50">
+                     <span class="text-[10px] font-mono border border-slate-700 px-1 text-slate-500">SYS-MONITOR</span>
+                  </div>
+                  <div class="h-10 w-10 text-red-500 mb-4 group-hover:scale-110 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <h3 class="text-xl font-bold text-slate-200 group-hover:text-red-400">Event Stream</h3>
+                  <p class="text-sm text-slate-500 mt-2">Realtime monitoring of the economy.</p>
+                  <div class="mt-4 flex items-center text-xs font-mono text-slate-600 group-hover:text-red-500">
+                     {{ isLoggedIn ? '> VIEW MONITOR' : '> LOGIN REQUIRED' }}
                   </div>
                 </div>
 

@@ -39,6 +39,7 @@ function resolveUser(userId) {
     if (userId === 'exchange') return Promise.resolve('Exchange');
     if (userId === 'shop-eco-fashion') return Promise.resolve('Fashion Shop');
     if (userId === 'shop-eco-flights') return Promise.resolve('Flight Shop');
+    if (userId === 'shop-eco-trains') return Promise.resolve('Train Shop');
 
     if (userCache[userId]) return Promise.resolve(userCache[userId]);
 
@@ -139,6 +140,11 @@ async function startRabbitConsumer() {
                         const user = await resolveUser(data.userId);
                         // Zugriff auf die Felder im 'data' Objekt des Events
                         readableMessage = `${user} booked Flight ${data.flightNumber} (${data.from} → ${data.to})`;
+                    }
+                    // --- NEU: TRAIN BOOKED ---
+                    else if (type === 'TRAIN_BOOKED') {
+                        const user = await resolveUser(data.userId);
+                        readableMessage = `${user} booked Train ${data.trainNumber} from ${data.from} to ${data.to}`;
                     }
                     // --- NEU: PRODUCT PURCHASED ---
                     else if (type === 'PRODUCT_PURCHASED') {

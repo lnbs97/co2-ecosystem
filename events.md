@@ -155,6 +155,7 @@ Dieses Event wird gefeuert, sobald eine Order (Kauf oder Verkauf) gematcht wurde
     "timestamp": "2026-03-11T12:00:00.123456"
   }
 }
+```
 
 ---
 

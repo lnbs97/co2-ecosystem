@@ -221,6 +221,38 @@ services:
       - "traefik.http.routers.shop-flights-backend.entrypoints=web"
       - "traefik.http.services.shop-flights-backend.loadbalancer.server.port=8080"
 
+  # --- TRAIN SHOP SERVICES (/trains) ---
+
+  shop-carbon-trains-backend:
+    container_name: shop-carbon-trains-backend
+    build: ../services/shop_carbon_trains/backend
+    networks:
+      - co2-network
+    depends_on:
+      - rabbitmq
+      - wallet-backend
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - WALLET_URL=http://wallet-backend:8080/api/wallet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.shop-trains-backend.rule=PathPrefix(`/api/trains`)"
+      - "traefik.http.routers.shop-trains-backend.entrypoints=web"
+      - "traefik.http.services.shop-trains-backend.loadbalancer.server.port=8080"
+
+  shop-carbon-trains-ui:
+    container_name: shop-carbon-trains-ui
+    build: ../services/shop_carbon_trains/frontend
+    networks:
+      - co2-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.shop-trains-ui.rule=PathPrefix(`/trains`)"
+      - "traefik.http.routers.shop-trains-ui.entrypoints=web"
+      - "traefik.http.middlewares.shop-trains-strip.stripprefix.prefixes=/trains"
+      - "traefik.http.routers.shop-trains-ui.middlewares=shop-trains-strip"
+      - "traefik.http.services.shop-trains-ui.loadbalancer.server.port=80"
+
   # --- INFRASTRUKTUR ---
   rabbitmq:
     image: rabbitmq:3-management
