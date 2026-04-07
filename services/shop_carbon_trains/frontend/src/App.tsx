@@ -48,6 +48,43 @@ function App() {
   const [userId, setUserId] = useState(localStorage.getItem('userId') || '');
   const [booking, setBooking] = useState(false);
   const [message, setMessage] = useState('');
+  const [balance, setBalance] = useState<{ moneyBalance: number, co2Balance: number } | null>(null);
+
+  const formatNumber = (num: number) => {
+    return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num);
+  };
+
+  const fetchBalance = async () => {
+    if (!userId) {
+        setBalance(null);
+        return;
+    }
+    try {
+      const res = await fetch(`/api/wallet/balance`, {
+          headers: {
+              'X-User-ID': userId
+          }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBalance(data);
+      } else {
+          console.error('Balance request failed with status:', res.status);
+          setBalance(null);
+      }
+    } catch (err) {
+      console.error('Failed to fetch balance:', err);
+      setBalance(null);
+    }
+  };
+
+  useEffect(() => {
+    fetchBalance();
+    
+    // Polling balance every 5 seconds to keep it updated
+    const interval = setInterval(fetchBalance, 5000);
+    return () => clearInterval(interval);
+  }, [userId]);
 
   const bookTrain = async (train: Train) => {
     if (!userId) {
@@ -68,6 +105,7 @@ function App() {
       const result = await res.json();
       if (res.ok) {
         setMessage('Booking successful! Event emitted.');
+        fetchBalance();
       } else {
         setMessage(`Error: ${result.error}`);
       }
@@ -79,65 +117,96 @@ function App() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-8">
-      <header className="flex justify-between items-center mb-12 border-b border-gray-800 pb-6">
-        <div>
-          <h1 className="text-4xl font-bold text-green-400">Eco Rails</h1>
-          <p className="text-gray-400">Fast, Green, European.</p>
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-xs text-gray-500 uppercase tracking-widest">Active User ID</label>
-          <input 
-            value={userId}
-            onChange={(e) => {
-              setUserId(e.target.value);
-              localStorage.setItem('userId', e.target.value);
-            }}
-            placeholder="e.g. user-123"
-            className="bg-gray-800 border border-gray-700 px-3 py-2 rounded text-sm focus:outline-none focus:border-green-500"
-          />
-        </div>
-      </header>
-
-      {message && (
-        <div className={`mb-8 p-4 rounded border ${message.includes('Error') ? 'bg-red-900/20 border-red-500 text-red-200' : 'bg-green-900/20 border-green-500 text-green-200'}`}>
-          {message}
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {TRAINS.map((train) => (
-          <div key={train.id} className="bg-gray-800/50 border border-gray-700 p-6 rounded-xl hover:border-green-500/50 transition-colors group">
-            <div className="flex justify-between items-start mb-4">
-              <span className="text-xs font-mono text-gray-500">{train.trainNumber}</span>
-              <div className="flex gap-2 text-sm font-bold">
-                <span className="text-green-400">{train.priceEur} €</span>
-                <span className="text-blue-400">{train.priceCo2} g CO2</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4 mb-6">
-              <div className="flex-1">
-                <div className="text-xl font-bold">{train.from}</div>
-              </div>
-              <div className="h-[2px] w-8 bg-gray-700 relative">
-                <div className="absolute top-[-4px] right-0 w-2 h-2 rounded-full bg-green-500"></div>
-              </div>
-              <div className="flex-1 text-right">
-                <div className="text-xl font-bold">{train.to}</div>
-              </div>
-            </div>
-
-            <button 
-              disabled={booking}
-              onClick={() => bookTrain(train)}
-              className="w-full bg-green-600 hover:bg-green-500 disabled:bg-gray-700 text-white py-3 rounded-lg font-bold transition-colors"
-            >
-              {booking ? 'Processing...' : 'Book Ticket'}
-            </button>
+    <div className="bg-gray-950 text-gray-100 min-h-screen w-full">
+      <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <header className="flex flex-col sm:flex-row justify-between items-center mb-12 border-b border-gray-800 pb-6 gap-6">
+          <div className="text-center sm:text-left">
+            <h1 className="text-4xl font-bold text-green-400">Eco Rails</h1>
+            <p className="text-gray-400">Fast, Green, European.</p>
           </div>
-        ))}
+          <div className="flex items-center gap-4">
+            {balance ? (
+              <div className="flex gap-3 sm:gap-4">
+                <div className="bg-gray-900 border border-gray-800 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg flex flex-col items-end shadow-sm">
+                  <span className="text-sm sm:text-base font-bold text-blue-400">{formatNumber(balance.moneyBalance)} €</span>
+                </div>
+                <div className="bg-gray-900 border border-gray-800 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg flex flex-col items-end shadow-sm">
+                  <span className="text-sm sm:text-base font-bold text-green-400">{formatNumber(balance.co2Balance)} g CO2</span>
+                </div>
+              </div>
+            ) : (
+               <div className="text-xs text-amber-500 bg-amber-900/20 border border-amber-500/50 px-4 py-2 rounded-md animate-pulse">
+                  {userId ? 'Loading Balance...' : 'Please login via Hub'}
+               </div>
+            )}
+          </div>
+        </header>
+
+        {message && (
+          <div className={`mb-8 p-4 rounded-lg border shadow-lg animate-in fade-in slide-in-from-top-4 duration-300 ${message.includes('Error') ? 'bg-red-900/20 border-red-500/50 text-red-200' : 'bg-green-900/20 border-green-500/50 text-green-200'}`}>
+            <div className="flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full ${message.includes('Error') ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                <p className="font-medium">{message}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6 lg:gap-8">
+          {TRAINS.map((train) => (
+            <div key={train.id} className="bg-gray-900/40 border border-gray-800 p-6 rounded-2xl hover:border-green-500/40 transition-all duration-300 group shadow-xl hover:shadow-green-900/5">
+              <div className="flex justify-between items-start mb-6">
+                <span className="text-[10px] font-mono text-gray-500 bg-gray-800/50 px-2 py-1 rounded tracking-wider">{train.trainNumber}</span>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-lg font-bold text-blue-400">{formatNumber(train.priceEur)} €</span>
+                  <span className="text-xs font-semibold text-green-400/80">{formatNumber(train.priceCo2)} g CO2</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-4 mb-8">
+                <div className="flex-1">
+                  <div className="text-xs text-gray-500 uppercase tracking-tighter mb-1">Departure</div>
+                  <div className="text-xl font-bold text-gray-100">{train.from}</div>
+                </div>
+                
+                <div className="flex flex-col items-center gap-1 group-hover:px-2 transition-all duration-500">
+                    <div className="h-[2px] w-12 bg-gray-800 relative overflow-hidden rounded-full">
+                        <div className="absolute inset-0 bg-green-500/30"></div>
+                        <div className="absolute top-0 left-0 h-full w-1/2 bg-green-500 shadow-[0_0_10px_#22c55e] animate-infinite-scroll"></div>
+                    </div>
+                </div>
+
+                <div className="flex-1 text-right">
+                  <div className="text-xs text-gray-500 uppercase tracking-tighter mb-1">Arrival</div>
+                  <div className="text-xl font-bold text-gray-100">{train.to}</div>
+                </div>
+              </div>
+
+              <button 
+                disabled={booking || !userId}
+                onClick={() => bookTrain(train)}
+                className="w-full bg-green-600 hover:bg-green-500 disabled:bg-gray-800 disabled:text-gray-500 text-white py-4 rounded-xl font-bold transition-all duration-200 shadow-lg shadow-green-900/20 active:scale-[0.98]"
+              >
+                {booking ? (
+                    <div className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        <span>Processing...</span>
+                    </div>
+                ) : (!userId ? 'Login Required' : 'Book Ticket')}
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
+      
+      <style>{`
+        @keyframes infinite-scroll {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(200%); }
+        }
+        .animate-infinite-scroll {
+            animation: infinite-scroll 2s linear infinite;
+        }
+      `}</style>
     </div>
   )
 }
