@@ -24,12 +24,12 @@ export default function HomePage() {
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
     const formatNumber = (num: number | undefined) => {
-        if (num === undefined || num === null) return '0';
-        return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num);
+        if (num === undefined || num === null) return '0,00';
+        return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
     };
 
     const formatCO2 = (num: number | undefined) => {
-        return formatNumber(num) + ' kg';
+        return formatNumber(num) + ' g';
     };
 
     useEffect(() => {
