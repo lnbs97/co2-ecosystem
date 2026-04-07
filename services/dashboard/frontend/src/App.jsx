@@ -169,7 +169,7 @@ function App() {
                                     {evt.type === 'USER_REGISTERED' && evt.details?.userType && (
                                         <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold border ${
                                             evt.details.userType === 'reich' 
-                                                ? 'bg-amber-900/30 text-amber-400 border-amber-800' 
+                                                ? 'bg-slate-800 text-slate-300 border-slate-700' 
                                                 : 'bg-slate-800 text-slate-300 border-slate-700'
                                         }`}>
                                             Class: {evt.details.userType.toUpperCase()}

@@ -43,7 +43,7 @@ const personaData = computed(() => {
             role: 'HIGH INCOME / CONSUMER',
             // Werte angepasst an dein Python Backend (1000€ / 5 CO2)
             desc: 'Your consumption profile is classified as HIGH INTENSITY. Your initial carbon allowance is critically low. Use your financial capital to acquire necessary emission rights immediately.',
-            startCash: 24500.00,
+            startCash: 64500.00,
             startToken: 850.00,     
             tasks: richTasks
         };

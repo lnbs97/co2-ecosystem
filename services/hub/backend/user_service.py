@@ -191,7 +191,7 @@ def register_user():
         
         if is_rich:
             user_type = 'reich'
-            initial_money = 24500.0  # Viel Geld, wenig CO2-Rechte
+            initial_money = 64500.0  # Viel Geld, wenig CO2-Rechte
             initial_co2 = 850.0       
         else:
             user_type = 'arm'
