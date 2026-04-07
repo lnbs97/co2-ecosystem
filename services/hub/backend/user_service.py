@@ -186,8 +186,8 @@ def register_user():
         user_id = str(uuid.uuid4())
 
         # Schritt 2: Spielmechanik "Reich vs. Arm"
-        # Wir nutzen Modulo (%), für ein Verhältnis von 1/3 brauche wir % 4
-        is_rich = user_counter % 5 == 0 
+        # Wir nutzen Modulo (%), für ein Verhältnis von 1/3 
+        is_rich = user_counter % 3 == 0 
         
         if is_rich:
             user_type = 'reich'
