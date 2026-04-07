@@ -118,7 +118,12 @@ async function startRabbitConsumer() {
                         const user = await resolveUser(data.userId);
                         readableMessage = `🌟 ${user} has completed ALL tasks! 🌟`;
                     }
+                    // --- NEU: USER REGISTERED ---
+                    else if (type === 'USER_REGISTERED') {
+                        readableMessage = `${data.vorname} registered!`;
+                    }
                     // Case: Wallet Created
+
                     else if (type === 'WALLET_CREATED') {
                         const name = await resolveUser(data.userId);
                         readableMessage = `Wallet created for ${name}`;
