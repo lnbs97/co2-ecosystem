@@ -34,7 +34,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 min-h-screen border-t border-slate-800">
 
         <div class="bg-slate-950 border-r border-slate-800 p-8 lg:p-12 flex flex-col justify-center">
-          
+
           <div class="max-w-xl mx-auto">
             <div class="border-b border-slate-800 pb-6 mb-8">
               <div class="flex items-center gap-3 mb-3">
@@ -48,7 +48,7 @@
             </div>
 
             <div class="space-y-8 text-slate-300 leading-relaxed">
-              
+
               <div>
                 <h3 class="text-white font-mono uppercase text-sm mb-3 flex items-center gap-2">
                   <span class="w-2 h-2 bg-red-500 rounded-full"></span>
@@ -73,7 +73,7 @@
                 <ul class="text-sm space-y-2 font-mono text-slate-400 bg-slate-900 p-4 rounded border border-slate-800">
                   <li class="flex justify-between">
                     <span>Exchange Rate:</span>
-                    <span class="text-white">1g CO2 = 1 Token</span>
+                    <span class="text-white">1 Token = 1 kg CO2</span>
                   </li>
                   <li class="flex justify-between">
                     <span>Transaction Lock:</span>
@@ -90,7 +90,7 @@
                 <p class="text-xs mb-4 text-slate-400">
                   To force "Net Zero" by 2050, the state allocation of tokens is <strong>cut by 7.5% annually</strong>.
                 </p>
-                
+
                 <div class="flex items-end gap-1 h-12 border-b border-slate-700 pb-1 font-mono text-[10px] text-center">
                   <div class="w-1/6 bg-emerald-600/50 h-full flex items-end justify-center pb-1 text-emerald-200">2031</div>
                   <div class="w-1/6 bg-emerald-700/50 h-[80%] flex items-end justify-center pb-1 text-slate-400">2035</div>
@@ -114,9 +114,9 @@
 
 
         <div class="bg-slate-950 p-8 lg:p-12 flex flex-col justify-center relative">
-            
+
             <div class="max-w-xl mx-auto w-full">
-              
+
               <div class="mb-10 border-b border-slate-800 pb-6">
                 <div v-if="isLoggedIn && userName">
                    <span class="text-xs font-mono text-emerald-500">● IDENTIFIED</span>
@@ -127,7 +127,7 @@
                    <span class="text-xs font-mono text-slate-500">● UNIDENTIFIED</span>
                    <h2 class="text-3xl font-bold text-white mt-1">Authentication Required</h2>
                    <p class="text-slate-400 mt-2">Identify yourself to retrieve your budget.</p>
-                   
+
                    <router-link to="/register" class="mt-6 inline-flex items-center px-6 py-3 border border-emerald-500 text-emerald-500 hover:bg-emerald-500 hover:text-slate-900 transition-colors font-mono uppercase text-sm font-bold tracking-wider">
                      Proceed to Registration
                    </router-link>
@@ -135,8 +135,8 @@
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                
-                <div @click="handleServiceClick('/wallet')" 
+
+                <div @click="handleServiceClick('/wallet')"
                      class="group relative border border-slate-800 bg-slate-900/50 p-6 cursor-pointer hover:border-emerald-500/50 transition-all hover:bg-slate-900">
                   <div class="absolute top-0 right-0 p-2 opacity-50">
                      <span class="text-[10px] font-mono border border-slate-700 px-1 text-slate-500">SYS-01</span>
@@ -151,7 +151,7 @@
                   </div>
                 </div>
 
-                <div @click="handleServiceClick('/exchange')" 
+                <div @click="handleServiceClick('/exchange')"
                      class="group relative border border-slate-800 bg-slate-900/50 p-6 cursor-pointer hover:border-blue-500/50 transition-all hover:bg-slate-900">
                   <div class="absolute top-0 right-0 p-2 opacity-50">
                      <span class="text-[10px] font-mono border border-slate-700 px-1 text-slate-500">SYS-02</span>
@@ -166,7 +166,7 @@
                   </div>
                 </div>
 
-                <div @click="handleServiceClick('/shop')" 
+                <div @click="handleServiceClick('/shop')"
                      class="group relative border border-slate-800 bg-slate-900/50 p-6 cursor-pointer hover:border-purple-500/50 transition-all hover:bg-slate-900">
                   <div class="absolute top-0 right-0 p-2 opacity-50">
                      <span class="text-[10px] font-mono border border-slate-700 px-1 text-slate-500">SYS-03</span>
@@ -181,7 +181,7 @@
                   </div>
                 </div>
 
-                <div @click="handleServiceClick('/flights')" 
+                <div @click="handleServiceClick('/flights')"
                      class="group relative border border-slate-800 bg-slate-900/50 p-6 cursor-pointer hover:border-orange-500/50 transition-all hover:bg-slate-900">
                   <div class="absolute top-0 right-0 p-2 opacity-50">
                      <span class="text-[10px] font-mono border border-slate-700 px-1 text-slate-500">SYS-04</span>
@@ -198,24 +198,30 @@
                   </div>
                 </div>
 
-                <div @click="handleServiceClick('/trains')" 
+                <div @click="handleServiceClick('/trains')"
                      class="group relative border border-slate-800 bg-slate-900/50 p-6 cursor-pointer hover:border-emerald-500/50 transition-all hover:bg-slate-900">
                   <div class="absolute top-0 right-0 p-2 opacity-50">
                      <span class="text-[10px] font-mono border border-slate-700 px-1 text-slate-500">SYS-05</span>
                   </div>
                   <div class="h-10 w-10 text-emerald-500 mb-4 group-hover:scale-110 transition-transform">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                      <rect x="4" y="3" width="16" height="14" rx="2" />
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M4 11h16" />
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v8" />
+                      <circle cx="8" cy="14" r="1" />
+                      <circle cx="16" cy="14" r="1" />
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 21l2-4" />
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M18 21l-2-4" />
                     </svg>
                   </div>
-                  <h3 class="text-xl font-bold text-slate-200 group-hover:text-emerald-400">Train Shop</h3>
+                  <h3 class="text-xl font-bold text-slate-200 group-hover:text-emerald-400">Train Tickets</h3>
                   <p class="text-sm text-slate-500 mt-2">Green travel options. Low emissions.</p>
                   <div class="mt-4 flex items-center text-xs font-mono text-slate-600 group-hover:text-emerald-500">
                      {{ isLoggedIn ? '> BOOK TRAIN' : '> LOGIN REQUIRED' }}
                   </div>
                 </div>
 
-                <div @click="handleServiceClick('/dashboard')" 
+                <div @click="handleServiceClick('/dashboard')"
                      class="group relative border border-slate-800 bg-slate-900/50 p-6 cursor-pointer hover:border-red-500/50 transition-all hover:bg-slate-900">
                   <div class="absolute top-0 right-0 p-2 opacity-50">
                      <span class="text-[10px] font-mono border border-slate-700 px-1 text-slate-500">SYS-MONITOR</span>
@@ -263,15 +269,15 @@ const userName = ref('');
 
 function handleServiceClick(externalUrl) {
   if (isLoggedIn.value) {
-    window.location.href = externalUrl; 
+    window.location.href = externalUrl;
   } else {
-    router.push('/register'); 
+    router.push('/register');
   }
 }
 
 async function fetchUserData() {
   const userId = localStorage.getItem('userId');
-  
+
   if (!userId) {
     isLoggedIn.value = false;
     userName.value = '';
@@ -282,10 +288,10 @@ async function fetchUserData() {
     const response = await axios.get('/api/user-service/me', {
       headers: { 'Authorization': `Bearer ${userId}` }
     });
-    
+
     isLoggedIn.value = true;
-    userName.value = response.data.vorname; 
-    
+    userName.value = response.data.vorname;
+
   } catch (error) {
     console.error("Session invalid:", error);
     localStorage.removeItem('userId');

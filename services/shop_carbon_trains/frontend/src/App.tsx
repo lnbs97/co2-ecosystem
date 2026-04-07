@@ -120,9 +120,30 @@ function App() {
     <div className="bg-gray-950 text-gray-100 min-h-screen w-full">
       <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <header className="flex flex-col sm:flex-row justify-between items-center mb-12 border-b border-gray-800 pb-6 gap-6">
-          <div className="text-center sm:text-left">
-            <h1 className="text-4xl font-bold text-green-400">Eco Rails</h1>
-            <p className="text-gray-400">Fast, Green, European.</p>
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left">
+            <div className="p-3 bg-green-500/10 rounded-2xl border border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]">
+              <svg 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className="w-10 h-10 text-green-400"
+              >
+                <rect x="4" y="3" width="16" height="14" rx="2" />
+                <path d="M4 11h16" />
+                <path d="M12 3v8" />
+                <circle cx="8" cy="14" r="1" />
+                <circle cx="16" cy="14" r="1" />
+                <path d="M6 21l2-4" />
+                <path d="M18 21l-2-4" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold text-green-400">Eco Rails</h1>
+              <p className="text-gray-400">Fast, Green, European.</p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             {balance ? (
