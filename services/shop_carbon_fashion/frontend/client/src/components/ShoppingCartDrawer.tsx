@@ -34,6 +34,10 @@ export default function ShoppingCartDrawer({
   const totalEuro = items.reduce((sum, item) => sum + item.euroPrice * item.quantity, 0);
   const totalCO2 = items.reduce((sum, item) => sum + item.co2Price * item.quantity, 0);
 
+  const formatNumber = (num: number) => {
+    return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num);
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="w-full sm:max-w-md flex flex-col" data-testid="drawer-cart">
@@ -133,13 +137,13 @@ export default function ShoppingCartDrawer({
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal (Euro)</span>
                   <span className="font-semibold text-foreground" data-testid="text-total-euro">
-                    €{totalEuro.toFixed(2)}
+                    {formatNumber(totalEuro)} €
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal (CO₂)</span>
                   <span className="font-semibold text-foreground" data-testid="text-total-co2">
-                    {totalCO2} CO₂
+                    {formatNumber(totalCO2)} g CO₂
                   </span>
                 </div>
               </div>

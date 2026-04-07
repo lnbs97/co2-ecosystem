@@ -42,8 +42,8 @@ const personaData = computed(() => {
             role: 'HIGH INCOME / CONSUMER',
             // Werte angepasst an dein Python Backend (1000€ / 5 CO2)
             desc: 'Your consumption profile is classified as HIGH INTENSITY. Your initial carbon allowance is critically low. Use your financial capital to acquire necessary emission rights immediately.',
-            startCash: '24,500.00',
-            startToken: '850.00',     
+            startCash: 24500.00,
+            startToken: 850.00,     
             tasks: richTasks
         };
     } else if (userType.value === 'arm') {
@@ -51,8 +51,8 @@ const personaData = computed(() => {
             role: 'LOW INCOME / SAVER',
             // Werte angepasst an dein Python Backend (50€ / 100 CO2)
             desc: 'Your consumption profile is MINIMAL. You have been allocated a surplus of Carbon Tokens. Your liquidity is low; consider trading your surplus rights for currency.',
-            startCash: '42.50',     
-            startToken: '310000.00',
+            startCash: 42.50,     
+            startToken: 310000.00,
             tasks: poorTasks
         };
     } else {
@@ -60,8 +60,8 @@ const personaData = computed(() => {
         return {
             role: 'CITIZEN',
             desc: 'Standard profile loaded. Manage your resources wisely.',
-            startCash: '---',
-            startToken: '---',
+            startCash: 0,
+            startToken: 0,
             tasks: defaultTasks
         };
     }
@@ -152,6 +152,11 @@ const fetchInitialStatus = async () => {
     } catch (e) { console.warn(e); }
 };
 
+const formatNumber = (num) => {
+    if (num === undefined || num === null || isNaN(num)) return '0';
+    return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num);
+};
+
 // --- 5. API & INIT ---
 const openModal = () => {
   fetchUserData(); // Lädt jetzt auch den Typ!
@@ -233,16 +238,16 @@ onUnmounted(() => {
                  <div class="absolute top-0 right-0 p-2 text-slate-700 text-[10px]">INITIAL_ALLOCATION_DATA</div>
                  <div class="grid grid-cols-2 gap-4">
                     <div>
-                       <span class="block text-xs text-slate-500 uppercase mb-1">Carbon Tokens (CT)</span>
+                       <span class="block text-xs text-slate-500 uppercase mb-1">Carbon Assets</span>
                        <span class="text-xl font-bold text-emerald-400 flex items-center gap-2">
                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9H5v2h2v-2zm8 0h-2v2h2v-2zM9 9h2v2H9V9z" clip-rule="evenodd" /></svg>
-                          {{ personaData.startToken }}
+                          {{ formatNumber(personaData.startToken) }} g CO2
                        </span>
                     </div>
                     <div>
-                       <span class="block text-xs text-slate-500 uppercase mb-1">Euro (€)</span>
+                       <span class="block text-xs text-slate-500 uppercase mb-1">Euro Balance</span>
                        <span class="text-xl font-bold text-blue-400">
-                          € {{ personaData.startCash }}
+                          € {{ formatNumber(personaData.startCash) }}
                        </span>
                     </div>
                  </div>

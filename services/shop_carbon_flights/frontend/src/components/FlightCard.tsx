@@ -10,6 +10,10 @@ interface FlightCardProps {
 }
 
 export const FlightCard = ({ flight, onBook, isBooking }: FlightCardProps) => {
+  const formatNumber = (num: number) => {
+    return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num);
+  };
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -71,12 +75,12 @@ export const FlightCard = ({ flight, onBook, isBooking }: FlightCardProps) => {
           <div className="flex lg:flex-col items-center justify-between lg:justify-center gap-4 p-6 bg-muted/30 border-t lg:border-t-0 lg:border-l border-border/50 min-w-[200px]">
             <div className="flex flex-col items-center gap-2">
               <div className="text-center">
-                <p className="text-2xl font-bold text-foreground">€{flight.priceEur}</p>
+                <p className="text-2xl font-bold text-foreground">{formatNumber(flight.priceEur)} €</p>
                 <p className="text-xs text-muted-foreground">per person</p>
               </div>
               <div className="flex items-center gap-1 text-co2 bg-co2/10 px-2 py-1 rounded-full">
                 <Leaf className="h-3 w-3" />
-                <span className="text-sm font-semibold">{flight.priceCo2} CO₂</span>
+                <span className="text-sm font-semibold">{formatNumber(flight.priceCo2)} g CO₂</span>
               </div>
             </div>
             <Button

@@ -7,6 +7,10 @@ interface DualPriceProps {
 }
 
 export default function DualPrice({ euroPrice, co2Price, size = "md" }: DualPriceProps) {
+  const formatNumber = (num: number) => {
+    return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num);
+  };
+
   const textSize = {
     sm: "text-sm",
     md: "text-lg",
@@ -28,11 +32,11 @@ export default function DualPrice({ euroPrice, co2Price, size = "md" }: DualPric
   return (
     <div className="flex flex-col gap-1">
       <div className={`${textSize} ${fontWeight} text-foreground`}>
-        €{euroPrice.toFixed(2)}
+        {formatNumber(euroPrice)} €
       </div>
       <div className={`${co2Size} font-medium text-muted-foreground flex items-center gap-1`}>
         <Cloud className="w-3 h-3" />
-        {co2Price} CO₂
+        {formatNumber(co2Price)} g CO₂
       </div>
     </div>
   );

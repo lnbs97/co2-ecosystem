@@ -9,6 +9,11 @@ function App() {
     const [events, setEvents] = useState([]);
     const [connected, setConnected] = useState(false);
 
+    const formatNumber = (num) => {
+        if (num === undefined || num === null) return '0';
+        return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num);
+    };
+
     useEffect(() => {
         const socket = io('/', {
             path: SOCKET_PATH,
@@ -135,14 +140,38 @@ function App() {
 
                                 <p className="text-gray-400 mt-1">{evt.message || JSON.stringify(evt.data)}</p>
 
-                                <div className="flex gap-2 mt-3">
-                                    {evt.amount && (
-                                        <span
-                                            className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold bg-gray-800 text-gray-300 border border-gray-700">
-                                            {/* 3. NEU: Logik für Label angepasst */}
-                                            {getAmountLabel(evt)} {Math.abs(evt.amount)}
+                                <div className="flex flex-wrap gap-2 mt-3">
+                                    {(evt.type === 'CO2_TRANSFER' || evt.type?.includes('CO2')) && evt.amount && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold bg-green-900/30 text-green-400 border border-green-800">
+                                            {formatNumber(Math.abs(evt.amount))} kg CO2
                                         </span>
                                     )}
+                                    {(evt.type === 'MONEY_TRANSFER' || evt.type?.includes('MONEY') || evt.type === 'WALLET_CREATED') && evt.amount && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold bg-blue-900/30 text-blue-400 border border-blue-800">
+                                            {formatNumber(Math.abs(evt.amount))} €
+                                        </span>
+                                    )}
+                                    {(evt.type === 'PRODUCT_PURCHASED' || evt.type === 'FLIGHT_BOOKED' || evt.type === 'TRAIN_BOOKED' || evt.type === 'TRADE_EXECUTED' || evt.type === 'ORDER_CREATED') && (
+                                        <>
+                                            {evt.details?.co2Amount !== undefined && (
+                                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold bg-green-900/30 text-green-400 border border-green-800">
+                                                    {formatNumber(evt.details.co2Amount || evt.details.priceCo2 || evt.details.amount)} g CO2
+                                                </span>
+                                            )}
+                                            {(evt.details?.moneyAmount !== undefined || evt.details?.priceEur !== undefined || evt.details?.amount_cash !== undefined) && (
+                                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold bg-blue-900/30 text-blue-400 border border-blue-800">
+                                                    {formatNumber(evt.details.moneyAmount || evt.details.priceEur || evt.details.amount_cash)} €
+                                                </span>
+                                            )}
+                                        </>
+                                    )}
+                                    {/* Fallback if no specific logic matched but amount exists */}
+                                    {!['CO2_TRANSFER', 'MONEY_TRANSFER', 'PRODUCT_PURCHASED', 'FLIGHT_BOOKED', 'TRAIN_BOOKED', 'TRADE_EXECUTED', 'ORDER_CREATED'].includes(evt.type) && evt.amount && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold bg-gray-800 text-gray-300 border border-gray-700">
+                                            {formatNumber(Math.abs(evt.amount))}
+                                        </span>
+                                    )}
+                                    
                                     {evt.type && (
                                         <span
                                             className="px-2 py-1 rounded text-xs font-mono bg-gray-800 text-gray-500 uppercase border border-gray-700">

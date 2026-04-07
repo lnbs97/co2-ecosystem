@@ -23,6 +23,15 @@ export default function HomePage() {
     const [error, setError] = useState<string | null>(null);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
+    const formatNumber = (num: number | undefined) => {
+        if (num === undefined || num === null) return '0';
+        return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num);
+    };
+
+    const formatCO2 = (num: number | undefined) => {
+        return formatNumber(num) + ' kg';
+    };
+
     useEffect(() => {
         const storedUserId = localStorage.getItem('userId');
         setCurrentUserId(storedUserId);
@@ -94,11 +103,11 @@ export default function HomePage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="bg-green-50 p-6 rounded-xl border border-green-100 shadow-sm">
                         <p className="text-sm text-green-600 font-medium uppercase tracking-wider">CO2 Balance</p>
-                        <p className="text-3xl font-bold text-green-800 mt-1">{balance.co2Balance} <span className="text-lg font-normal">kg</span></p>
+                        <p className="text-3xl font-bold text-green-800 mt-1">{formatCO2(balance.co2Balance)}</p>
                     </div>
                     <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 shadow-sm">
                         <p className="text-sm text-blue-600 font-medium uppercase tracking-wider">Euro Balance</p>
-                        <p className="text-3xl font-bold text-blue-800 mt-1">{balance.moneyBalance} <span className="text-lg font-normal">€</span></p>
+                        <p className="text-3xl font-bold text-blue-800 mt-1">{formatNumber(balance.moneyBalance)} <span className="text-lg font-normal">€</span></p>
                     </div>
                 </div>
               ) : (

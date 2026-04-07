@@ -111,8 +111,8 @@ function App() {
             <div className="flex justify-between items-start mb-4">
               <span className="text-xs font-mono text-gray-500">{train.trainNumber}</span>
               <div className="flex gap-2 text-sm font-bold">
-                <span className="text-green-400">{train.priceEur}€</span>
-                <span className="text-blue-400">{train.priceCo2}kg CO2</span>
+                <span className="text-green-400">{train.priceEur} €</span>
+                <span className="text-blue-400">{train.priceCo2} g CO2</span>
               </div>
             </div>
             
