@@ -29,7 +29,7 @@ export default function HomePage() {
     };
 
     const formatCO2 = (num: number | undefined) => {
-        return formatNumber((num || 0) / 1000) + ' kg';
+        return formatNumber((num || 0) / 1000) + ' CT';
     };
 
 
@@ -144,7 +144,7 @@ export default function HomePage() {
                           </select>
                       </div>
                       <div className="mb-6">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Amount (kg)</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Amount (CT)</label>
                           <input
                             type="number"
                             min="0.1"

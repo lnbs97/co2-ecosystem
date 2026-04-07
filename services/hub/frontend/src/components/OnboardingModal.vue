@@ -259,10 +259,10 @@ onUnmounted(() => {
                  <div class="absolute top-0 right-0 p-2 text-slate-700 text-[10px]">INITIAL_ALLOCATION_DATA</div>
                  <div class="grid grid-cols-2 gap-4">
                     <div>
-                       <span class="block text-xs text-slate-500 uppercase mb-1">Carbon Assets</span>
+                       <span class="block text-xs text-slate-500 uppercase mb-1">Carbon Tokens</span>
                        <span class="text-xl font-bold text-emerald-400 flex items-center gap-2">
                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9H5v2h2v-2zm8 0h-2v2h2v-2zM9 9h2v2H9V9z" clip-rule="evenodd" /></svg>
-                          {{ formatNumber(personaData.startToken / 1000) }} kg CO2
+                          {{ formatNumber(personaData.startToken / 1000) }} CT
                        </span>
                     </div>
 

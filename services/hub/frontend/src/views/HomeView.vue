@@ -73,7 +73,7 @@
                 <ul class="text-sm space-y-2 font-mono text-slate-400 bg-slate-900 p-4 rounded border border-slate-800">
                   <li class="flex justify-between">
                     <span>Exchange Rate:</span>
-                    <span class="text-white">1 Token = 1 kg CO2</span>
+                    <span class="text-white">1 kg CO2 = 1 Carbon Token(CT)</span>
                   </li>
                   <li class="flex justify-between">
                     <span>Transaction Lock:</span>

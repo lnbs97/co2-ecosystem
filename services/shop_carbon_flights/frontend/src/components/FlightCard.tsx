@@ -80,7 +80,7 @@ export const FlightCard = ({ flight, onBook, isBooking }: FlightCardProps) => {
               </div>
               <div className="flex items-center gap-1 text-co2 bg-co2/10 px-2 py-1 rounded-full">
                 <Leaf className="h-3 w-3" />
-                <span className="text-sm font-semibold">{formatNumber(flight.priceCo2 / 1000)} kg CO₂</span>
+                <span className="text-sm font-semibold">{formatNumber(flight.priceCo2 / 1000)} CT</span>
               </div>
 
             </div>

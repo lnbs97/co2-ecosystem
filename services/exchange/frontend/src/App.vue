@@ -149,7 +149,7 @@ const acceptOrder = async (order) => {
 // --- HELPER ---
 const isMyOrder = (order) => order.user_id === currentUser.value?.id;
 const formatCurrency = (val) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(val);
-const formatCO2 = (val) => new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(val / 1000) + " kg CO2";
+const formatCO2 = (val) => new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(val / 1000) + " CT";
 
 const showMessage = (text, type) => {
     message.value = { text, type };
@@ -184,7 +184,7 @@ onMounted(() => {
                     <span class="text-2xl font-bold tracking-tight">{{ formatCurrency(balance.eur) }}</span>
                 </div>
                 <div class="text-right border-l border-zinc-800 pl-6">
-                    <span class="block text-xs font-medium text-zinc-500 uppercase tracking-wide">Carbon Assets</span>
+                    <span class="block text-xs font-medium text-zinc-500 uppercase tracking-wide">Carbon Tokens</span>
                     <span class="text-2xl font-bold tracking-tight text-emerald-400">{{ formatCO2(balance.tokens) }}</span>
                 </div>
             </div>
@@ -222,7 +222,7 @@ onMounted(() => {
 
                     <div class="space-y-4">
                         <div class="group">
-                            <label class="block text-xs font-medium text-zinc-500 mb-1.5 ml-1">Quantity (kg CO2)</label>
+                            <label class="block text-xs font-medium text-zinc-500 mb-1.5 ml-1">Quantity (CT)</label>
                             <div class="relative">
                                 <input 
                                     type="number" 
@@ -230,7 +230,7 @@ onMounted(() => {
                                     class="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-lg font-medium text-white placeholder-zinc-700 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all"
                                     placeholder="0"
                                 >
-                                <div class="absolute right-4 top-3.5 text-zinc-600 text-sm font-medium">kg</div>
+                                <div class="absolute right-4 top-3.5 text-zinc-600 text-sm font-medium">CT</div>
                             </div>
                         </div>
 

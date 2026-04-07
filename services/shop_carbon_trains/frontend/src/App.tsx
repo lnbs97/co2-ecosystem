@@ -154,7 +154,7 @@ function App() {
                 </div>
                 <div className="bg-gray-900 border border-gray-800 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg flex flex-col items-end shadow-sm">
                   <span className="text-[10px] text-gray-500 uppercase tracking-widest">Carbon Rights</span>
-                  <span className="text-sm sm:text-base font-bold text-green-400">{formatNumber(balance.co2Balance / 1000)} kg CO2</span>
+                  <span className="text-sm sm:text-base font-bold text-green-400">{formatNumber(balance.co2Balance / 1000)} CT</span>
                 </div>
               </div>
             ) : (
@@ -181,7 +181,7 @@ function App() {
                 <span className="text-[10px] font-mono text-gray-500 bg-gray-800/50 px-2 py-1 rounded tracking-wider">{train.trainNumber}</span>
                 <div className="flex flex-col items-end gap-1">
                   <span className="text-lg font-bold text-blue-400">{formatNumber(train.priceEur)} €</span>
-                  <span className="text-xs font-semibold text-green-400/80">{formatNumber(train.priceCo2 / 1000)} kg CO2</span>
+                  <span className="text-xs font-semibold text-green-400/80">{formatNumber(train.priceCo2 / 1000)} CT</span>
                 </div>
               </div>
               
