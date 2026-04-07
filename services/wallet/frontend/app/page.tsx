@@ -29,8 +29,9 @@ export default function HomePage() {
     };
 
     const formatCO2 = (num: number | undefined) => {
-        return formatNumber(num) + ' g';
+        return formatNumber((num || 0) / 1000) + ' kg';
     };
+
 
     useEffect(() => {
         const storedUserId = localStorage.getItem('userId');

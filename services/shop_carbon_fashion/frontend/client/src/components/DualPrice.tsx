@@ -36,8 +36,9 @@ export default function DualPrice({ euroPrice, co2Price, size = "md" }: DualPric
       </div>
       <div className={`${co2Size} font-medium text-muted-foreground flex items-center gap-1`}>
         <Cloud className="w-3 h-3" />
-        {formatNumber(co2Price)} g CO₂
+        {formatNumber(co2Price / 1000)} kg CO₂
       </div>
+
     </div>
   );
 }

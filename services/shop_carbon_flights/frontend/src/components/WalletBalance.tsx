@@ -28,8 +28,9 @@ export const WalletBalance = ({ eurBalance, co2Balance, isLoading }: WalletBalan
       </div>
       <div className="flex items-center gap-2 bg-co2/10 px-3 py-1.5 rounded-lg border border-co2/30">
         <Leaf className="h-4 w-4 text-co2" />
-        <span className="font-semibold text-co2-foreground">{formatNumber(co2Balance)} g CO₂</span>
+        <span className="font-semibold text-co2-foreground">{formatNumber(co2Balance / 1000)} kg CO₂</span>
       </div>
+
     </div>
   );
 };

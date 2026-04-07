@@ -76,10 +76,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header
-        eurBalance={(eurBalance ?? 0).toLocaleString('de-DE', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}
+        eurBalance={eurBalance}
         co2Balance={co2Balance}
         isLoading={isLoadingBalance}
       />
@@ -193,10 +190,7 @@ const Index = () => {
         onClose={() => setSelectedFlight(null)}
         onConfirm={handleConfirmBooking}
         isBooking={isBooking}
-        eurBalance={(eurBalance ?? 0).toLocaleString('de-DE', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}
+        eurBalance={eurBalance}
         co2Balance={co2Balance}
       />
     </div>

@@ -19,7 +19,7 @@ export default function BalanceWidget({ euroBalance, co2Balance }: BalanceWidget
       </Badge>
       <Badge variant="secondary" className="gap-1.5 px-3">
         <Cloud className="w-3.5 h-3.5" />
-        <span className="font-semibold">{formatNumber(co2Balance)} g CO2</span>
+        <span className="font-semibold">{formatNumber(co2Balance / 1000)} kg CO2</span>
       </Badge>
     </div>
   );
