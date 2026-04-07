@@ -143,7 +143,7 @@ function App() {
                                 <div className="flex flex-wrap gap-2 mt-3">
                                     {(evt.type === 'CO2_TRANSFER' || evt.type?.includes('CO2')) && evt.amount && (
                                         <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold bg-green-900/30 text-green-400 border border-green-800">
-                                            {formatNumber(Math.abs(evt.amount))} kg CO2
+                                            {formatNumber(Math.abs(evt.amount))} g CO2
                                         </span>
                                     )}
                                     {(evt.type === 'MONEY_TRANSFER' || evt.type?.includes('MONEY') || evt.type === 'WALLET_CREATED') && evt.amount && (
