@@ -1,11 +1,11 @@
-import blackTShirt from "@assets/generated_images/black_minimalist_t-shirt_product.png";
-import blueJeans from "@assets/generated_images/blue_denim_jeans_product.png";
-import whiteShirt from "@assets/generated_images/white_button-up_shirt_product.png";
-import graySweater from "@assets/generated_images/gray_wool_sweater_product.png";
-import beigeTrench from "@assets/generated_images/beige_trench_coat_product.png";
-import blackSneakers from "@assets/generated_images/black_sneakers_product.png";
-import floralDress from "@assets/generated_images/floral_summer_dress_product.png";
-import navyBlazer from "@assets/generated_images/navy_blue_blazer_product.png";
+import blackTShirt from "@assets/generated_images/black_minimalist_t-shirt_product.jpg";
+import blueJeans from "@assets/generated_images/blue_denim_jeans_product.jpg";
+import whiteShirt from "@assets/generated_images/white_button-up_shirt_product.jpg";
+import graySweater from "@assets/generated_images/gray_wool_sweater_product.jpg";
+import beigeTrench from "@assets/generated_images/beige_trench_coat_product.jpg";
+import blackSneakers from "@assets/generated_images/black_sneakers_product.jpg";
+import floralDress from "@assets/generated_images/floral_summer_dress_product.jpg";
+import navyBlazer from "@assets/generated_images/navy_blue_blazer_product.jpg";
 
 export interface Product {
   id: string;
