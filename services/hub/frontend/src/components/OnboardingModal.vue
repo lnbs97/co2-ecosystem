@@ -7,6 +7,7 @@ const isOpen = ref(false);
 const userName = ref('');
 const userType = ref(''); // ⭐️ NEU: Speichert 'arm' oder 'reich'
 const tasksState = ref({}); 
+const isInitialAllocationAcknowledged = ref(false);
 
 // Achievement Logic
 const lastCompletedTask = ref(null); 
@@ -100,6 +101,22 @@ const loadProgress = () => {
     }
 };
 
+const saveAcknowledgement = () => {
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+        localStorage.setItem(`onboarding_ack_${userId}`, 'true');
+        isInitialAllocationAcknowledged.value = true;
+    }
+};
+
+const loadAcknowledgement = () => {
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+        const ack = localStorage.getItem(`onboarding_ack_${userId}`);
+        isInitialAllocationAcknowledged.value = ack === 'true';
+    }
+};
+
 // --- 4. AUTOMATION & EVENTS ---
 const handleGlobalEvents = (event) => {
     if (event.type === 'toggle-onboarding-modal') {
@@ -162,9 +179,13 @@ const openModal = () => {
   fetchUserData(); // Lädt jetzt auch den Typ!
   loadProgress();
   fetchInitialStatus();
+  loadAcknowledgement();
   isOpen.value = true;
 };
-const closeModal = () => isOpen.value = false;
+const closeModal = () => {
+    saveAcknowledgement();
+    isOpen.value = false;
+};
 
 // ⭐️ NEU: Holt Name UND Typ
 async function fetchUserData() {
@@ -229,7 +250,7 @@ onUnmounted(() => {
               </button>
             </div>
 
-            <div class="space-y-6 text-slate-300 mb-8">
+            <div v-if="!isInitialAllocationAcknowledged" class="space-y-6 text-slate-300 mb-8">
               <p class="text-sm leading-relaxed border-l-2 border-emerald-500/50 pl-4 bg-slate-950/30 py-2">
                  {{ personaData.desc }}
               </p>
@@ -290,7 +311,7 @@ onUnmounted(() => {
 
             <div class="mt-8 pt-4 border-t border-slate-800">
                <button @click="closeModal" class="w-full bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-300 font-bold uppercase tracking-widest py-3 transition-colors flex justify-center items-center gap-2 text-sm">
-                  ACKNOWLEDGE & CLOSE
+                  {{ isInitialAllocationAcknowledged ? 'CLOSE REPORT' : 'ACKNOWLEDGE & CLOSE' }}
                </button>
             </div>
 
