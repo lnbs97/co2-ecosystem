@@ -165,6 +165,16 @@ function App() {
                                             )}
                                         </>
                                     )}
+
+                                    {evt.type === 'USER_REGISTERED' && evt.details?.userType && (
+                                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold border ${
+                                            evt.details.userType === 'reich' 
+                                                ? 'bg-amber-900/30 text-amber-400 border-amber-800' 
+                                                : 'bg-slate-800 text-slate-300 border-slate-700'
+                                        }`}>
+                                            Class: {evt.details.userType.toUpperCase()}
+                                        </span>
+                                    )}
                                     {/* Fallback if no specific logic matched but amount exists */}
                                     {!['CO2_TRANSFER', 'MONEY_TRANSFER', 'PRODUCT_PURCHASED', 'FLIGHT_BOOKED', 'TRAIN_BOOKED', 'TRADE_EXECUTED', 'ORDER_CREATED'].includes(evt.type) && evt.amount && (
                                         <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold bg-gray-800 text-gray-300 border border-gray-700">

@@ -241,6 +241,11 @@ def register_user():
             return jsonify({"error": "Konnte Wallet nicht erstellen. Registrierung abgebrochen."}), 500
 
         # Alles erfolgreich -> 201 Created zurückgeben
+        publish_event('USER_REGISTERED', {
+            "userId": user_id,
+            "vorname": vorname,
+            "userType": user_type
+        })
         return jsonify({"userId": user_id, "userType": user_type}), 201
 
     except Exception as e:
