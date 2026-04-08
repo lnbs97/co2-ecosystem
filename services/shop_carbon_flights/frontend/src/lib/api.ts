@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8080/api/wallet';
+const API_BASE_URL = '/api/wallet';
 
 export const flightApi = {
   bookFlight: async (userId: string, flight: any) => {

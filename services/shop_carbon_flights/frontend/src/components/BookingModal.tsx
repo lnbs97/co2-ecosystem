@@ -92,10 +92,10 @@ export const BookingModal = ({
             }`}>
               <span className="flex items-center gap-2 text-foreground">
                 <Leaf className="h-4 w-4 text-co2" />
-                CO₂ Tokens
+                Carbon Tokens
               </span>
               <div className="text-right">
-                <span className="font-bold text-co2">{flight.priceCo2}</span>
+                <span className="font-bold text-co2">{flight.priceCo2 / 1000}</span>
                 {!hasEnoughCo2 && (
                   <p className="text-xs text-destructive flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" />

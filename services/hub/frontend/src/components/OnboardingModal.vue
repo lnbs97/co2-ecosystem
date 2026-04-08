@@ -133,7 +133,7 @@ const setupWebSocket = () => {
     // Verbindung zum User-Service aufbauen
     // Falls du Traefik nutzt, hier die Public URL (z.B. localhost/api/user-service oder direkt Port 8080)
     // Für Dev Umgebung direkt auf den Port:
-    socket = io("http://localhost:8080", {
+    socket = io({
         transports: ["websocket"], // Erzwingt Websocket (schneller)
     });
 
