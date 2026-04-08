@@ -89,7 +89,8 @@ function App() {
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
                         Global Event Stream
                     </h1>
-                    <p className="text-gray-400 text-sm mt-1">Realtime CO2 Economy Monitoring</p>
+                    <p className="text-gray-400 text-sm mt-1">Realtime Carbon Token Economy Monitoring</p>
+
                 </div>
                 <div className="flex items-center gap-2">
                     <div

@@ -56,7 +56,7 @@ class WalletService(
         val toWallet = walletRepository.findByUserId(request.toUserId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Wallet for user ${request.toUserId} not found.")
 
         if (fromWallet.co2Balance < request.amount) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient CO2 balance.")
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient Carbon Tokens.")
         }
 
         fromWallet.co2Balance -= request.amount
@@ -99,7 +99,7 @@ class WalletService(
         val toWallet = walletRepository.findByUserId(request.toUserId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Wallet for user ${request.toUserId} not found.")
 
         if (fromWallet.moneyBalance < request.amount) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient money balance.")
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient Euro balance.")
         }
 
         fromWallet.moneyBalance -= request.amount
@@ -146,11 +146,11 @@ class WalletService(
         val insufficientMoney = fromWallet.moneyBalance < request.moneyAmount
 
         if (insufficientCo2 && insufficientMoney) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient CO2 and money balance.")
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient Carbon Token and Euro balance.")
         } else if (insufficientCo2) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient CO2 balance.")
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient Carbon Token balance.")
         } else if (insufficientMoney) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient money balance.")
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient Euro balance.")
         }
 
         fromWallet.co2Balance -= request.co2Amount

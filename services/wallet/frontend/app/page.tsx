@@ -103,7 +103,7 @@ export default function HomePage() {
               {balance ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="bg-green-50 p-6 rounded-xl border border-green-100 shadow-sm">
-                        <p className="text-sm text-green-600 font-medium uppercase tracking-wider">CO2 Balance</p>
+                        <p className="text-sm text-green-600 font-medium uppercase tracking-wider">Carbon Token Balance</p>
                         <p className="text-3xl font-bold text-green-800 mt-1">{formatCO2(balance.co2Balance)}</p>
                     </div>
                     <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 shadow-sm">

@@ -141,7 +141,7 @@ export default function ShoppingCartDrawer({
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal (CO₂)</span>
+                  <span className="text-muted-foreground">Subtotal (Carbon Tokens)</span>
                   <span className="font-semibold text-foreground" data-testid="text-total-co2">
                     {formatNumber(totalCO2 / 1000)} CT
                   </span>

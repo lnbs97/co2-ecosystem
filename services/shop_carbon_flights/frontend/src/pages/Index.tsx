@@ -93,10 +93,10 @@ const Index = () => {
             <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4 font-display">
               Fly Smart, Pay with
               <br />
-              <span className="text-white/90">EUR + CO₂ Tokens</span>
+              <span className="text-white/90">EUR + Carbon Tokens</span>
             </h1>
             <p className="text-lg text-white/80 max-w-xl mx-auto">
-              Book your flights with our dual-currency system. Every journey is priced in euros and CO₂ tokens, making your environmental impact transparent.
+              Book your flights with our dual-currency system. Every journey is priced in Euros and Carbon Tokens, making your environmental impact transparent.
             </p>
           </div>
         </div>
@@ -146,10 +146,10 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-2xl font-bold text-foreground mb-4 font-display">
-              How CO₂ Token Pricing Works
+              How Carbon Token Pricing Works
             </h2>
             <p className="text-muted-foreground mb-8">
-              Each flight's CO₂ token price reflects its environmental impact based on distance, aircraft type, and occupancy. By requiring both EUR and CO₂ tokens, we encourage sustainable travel choices.
+              Each flight's Carbon Token price reflects its environmental impact based on distance, aircraft type, and occupancy. By requiring both EUR and Carbon Tokens, we encourage sustainable travel choices.
             </p>
             <div className="grid md:grid-cols-3 gap-6">
               <div className="bg-card p-6 rounded-xl shadow-soft">
@@ -158,7 +158,7 @@ const Index = () => {
                 </div>
                 <h3 className="font-semibold text-foreground mb-2">Transparent Pricing</h3>
                 <p className="text-sm text-muted-foreground">
-                  See both EUR and CO₂ costs upfront for every flight
+                  See both EUR and Carbon Token costs upfront for every flight
                 </p>
               </div>
               <div className="bg-card p-6 rounded-xl shadow-soft">
@@ -167,7 +167,7 @@ const Index = () => {
                 </div>
                 <h3 className="font-semibold text-foreground mb-2">Eco Incentives</h3>
                 <p className="text-sm text-muted-foreground">
-                  Shorter routes and efficient aircraft cost fewer CO₂ tokens
+                  Shorter routes and efficient aircraft cost fewer Carbon Tokens
                 </p>
               </div>
               <div className="bg-card p-6 rounded-xl shadow-soft">

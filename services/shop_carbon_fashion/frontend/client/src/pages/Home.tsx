@@ -85,7 +85,7 @@ export default function Home() {
         setIsCartOpen(false);
         toast({
           title: "Checkout Successful",
-          description: `Paid €${totalEuro.toFixed(2)} and ${totalCo2} CO2 tokens.`,
+          description: `Paid €${totalEuro.toFixed(2)} and ${totalCo2 / 1000} Carbon Tokens.`,
         });
       },
       onError: (error) => {
