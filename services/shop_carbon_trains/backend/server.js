@@ -48,8 +48,16 @@ app.post('/api/trains/book', async (req, res) => {
         });
 
         if (!paymentResponse.ok) {
-            const errorText = await paymentResponse.text();
-            throw new Error(`Payment failed: ${errorText}`);
+            let errorMessage = "Payment failed";
+            try {
+                const errorData = await paymentResponse.json();
+                errorMessage = errorData.message || errorData.error || JSON.stringify(errorData);
+            } catch (e) {
+                const text = await paymentResponse.text();
+                if (text) errorMessage = text;
+            }
+            res.status(paymentResponse.status).json({ error: errorMessage });
+            return;
         }
 
         // 2. Create System Event

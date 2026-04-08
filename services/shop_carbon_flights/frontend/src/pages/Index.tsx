@@ -58,16 +58,10 @@ const Index = () => {
         description: `${selectedFlight.flightNumber}: ${selectedFlight.departure.city} → ${selectedFlight.arrival.city}`,
       });
       setSelectedFlight(null);
-    } catch (error) {
-      // Demo mode: simulate successful booking
-      setEurBalance((prev) => prev - selectedFlight.priceEur);
-      setCo2Balance((prev) => prev - selectedFlight.priceCo2);
-      setBookedFlights((prev) => new Set(prev).add(selectedFlight.id));
-
-      toast.success('Flight booked successfully! (Demo Mode)', {
-        description: `${selectedFlight.flightNumber}: ${selectedFlight.departure.city} → ${selectedFlight.arrival.city}`,
+    } catch (error: any) {
+      toast.error('Booking failed', {
+        description: error.message || 'An unexpected error occurred',
       });
-      setSelectedFlight(null);
     } finally {
       setIsBooking(false);
     }

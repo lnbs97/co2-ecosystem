@@ -63,7 +63,7 @@ export default function HomePage() {
             return;
         }
         try {
-            await transferCo2({ toUserId: co2Recipient, amount: parseFloat(co2Amount), description: 'CO2 Transfer' });
+            await transferCo2({ toUserId: co2Recipient, amount: parseFloat(co2Amount), description: 'Carbon Token Transfer' });
             const updatedBalance = await getBalance();
             setBalance(updatedBalance);
             setCo2Amount('');

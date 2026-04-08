@@ -10,7 +10,10 @@ export const flightApi = {
       },
       body: JSON.stringify({ userId, flight }),
     });
-    if (!response.ok) throw new Error('Booking failed');
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Booking failed');
+    }
     return response.json();
   },
 };

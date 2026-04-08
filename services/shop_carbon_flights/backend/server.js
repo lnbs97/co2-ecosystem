@@ -50,7 +50,16 @@ app.post('/api/flights/book', async (req, res) => {
         });
 
         if (!paymentResponse.ok) {
-            throw new Error('Payment failed');
+            let errorMessage = "Payment failed";
+            try {
+                const errorData = await paymentResponse.json();
+                errorMessage = errorData.message || errorData.error || JSON.stringify(errorData);
+            } catch (e) {
+                const text = await paymentResponse.text();
+                if (text) errorMessage = text;
+            }
+            res.status(paymentResponse.status).json({ error: errorMessage });
+            return;
         }
 
         // 2. Event erstellen (Passend zur Kotlin SystemEvent Klasse)
