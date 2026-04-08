@@ -80,7 +80,7 @@
                     <span class="text-red-400 animate-pulse">ACTIVE</span>
                   </li>
                   <li class="text-xs pt-2 border-t border-slate-800 mt-2 opacity-75">
-                    No tokens, no transaction. Fiat currency is secondary.
+                    No tokens, no transaction.
                   </li>
                 </ul>
               </div>
