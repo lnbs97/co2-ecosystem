@@ -63,7 +63,9 @@ export default function HomePage() {
             return;
         }
         try {
-            await transferCo2({ toUserId: co2Recipient, amount: parseFloat(co2Amount), description: 'Carbon Token Transfer' });
+            // Multiply by 1000 because backend expects grams, but user enters CT (kg)
+            const amountInGrams = parseFloat(co2Amount) * 1000;
+            await transferCo2({ toUserId: co2Recipient, amount: amountInGrams, description: 'Carbon Token Transfer' });
             const updatedBalance = await getBalance();
             setBalance(updatedBalance);
             setCo2Amount('');
@@ -120,11 +122,11 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* CO2 Form */}
+              {/* Carbon Token Form */}
               <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100">
                   <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                       <span className="bg-green-100 text-green-600 p-2 rounded-full text-sm">🌱</span>
-                      Transfer CO2
+                      Transfer Carbon Tokens
                   </h2>
                   <form onSubmit={handleCo2Transfer}>
                       <div className="mb-4">
@@ -147,8 +149,8 @@ export default function HomePage() {
                           <label className="block text-sm font-medium text-gray-700 mb-1">Amount (CT)</label>
                           <input
                             type="number"
-                            min="0.1"
-                            step="0.1"
+                            min="0.01"
+                            step="0.01"
                             value={co2Amount}
                             onChange={(e) => setCo2Amount(e.target.value)}
                             className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
@@ -160,7 +162,7 @@ export default function HomePage() {
                         type="submit"
                         className="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
                       >
-                          Send CO2
+                          Send Carbon Tokens
                       </button>
                   </form>
               </div>
